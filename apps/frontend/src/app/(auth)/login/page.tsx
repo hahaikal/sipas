@@ -13,17 +13,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
 export default function LoginPage() {
-  // --- STATE MANAGEMENT ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- HOOKS ---
   const router = useRouter();
-  const { login: setAuthSession } = useAuth(); // Menggunakan alias agar tidak bentrok nama
+  const { login: setAuthSession } = useAuth();
 
-  // --- HANDLER ---
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -32,10 +29,8 @@ export default function LoginPage() {
     try {
       const { token, user } = await login(email, password);
       
-      // Simpan sesi ke context
       setAuthSession(token, user);
       
-      // Arahkan ke dashboard setelah login berhasil
       router.push('/dashboard');
 
     } catch (err: unknown) {
@@ -60,7 +55,6 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {/* --- ERROR ALERT --- */}
             {error && (
               <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
