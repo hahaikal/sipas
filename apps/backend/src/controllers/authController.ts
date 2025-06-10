@@ -1,14 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/authService';
 
-// Kita akan simpan data user sementara di sini sebelum OTP diverifikasi
-// Dalam produksi, ini lebih baik disimpan di cache seperti Redis. Untuk V1, ini cukup.
 const temporaryUserStore: { [email: string]: any } = {};
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, name, phone, password, role } = req.body;
-    // Simpan data user sementara
     temporaryUserStore[email] = { name, phone, password, role };
 
     const result = await authService.registerUser(email, name, phone, password, role);
@@ -30,7 +27,6 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
 
     const result = await authService.verifyOtpAndCreateUser(email, otp, userData);
 
-    // Hapus data dari temporary store
     delete temporaryUserStore[email];
 
     res.status(201).json(result);

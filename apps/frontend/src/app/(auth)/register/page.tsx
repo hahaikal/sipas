@@ -17,7 +17,7 @@ export default function RegisterPage() {
     email: '',
     phone: '',
     password: '',
-    role: 'guru',
+    role: 'admin',
   });
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
