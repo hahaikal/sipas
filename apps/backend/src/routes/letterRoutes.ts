@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as letterController from '../controllers/letterController';
 import { upload } from '../middleware/uploadMiddleware';
+import { protect } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -11,7 +12,7 @@ function asyncHandler(fn: any) {
 }
 
 router.route('/')
-  .post(upload.single('file'), asyncHandler(letterController.createLetter))
-  .get(asyncHandler(letterController.getAllLetters));
+  .post(protect, upload.single('file'), asyncHandler(letterController.createLetter))
+  .get(protect, asyncHandler(letterController.getAllLetters));
 
 export default router;

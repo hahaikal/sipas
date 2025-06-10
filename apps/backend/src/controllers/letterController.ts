@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Letter from '../models/Letter';
-
-interface AuthenticatedRequest extends Request {
-    user?: { id: string };
-}
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
