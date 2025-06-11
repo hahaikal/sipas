@@ -6,7 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, FilePenLine } from 'lucide-react';
+import Link from 'next/link';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,7 +111,13 @@ export default function ArsipPage() {
                       <TableCell>{letter.nomorSurat}</TableCell>
                       <TableCell className="font-medium">{letter.judul}</TableCell>
                       <TableCell>{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right flex justify-end gap-2">
+                        <Link href={`/dashboard/arsip/${letter._id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            <FilePenLine className="h-4 w-4" />
+                          </Button>
+                        </Link>
+
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm">

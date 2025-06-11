@@ -5,11 +5,6 @@ interface GetAllLettersResponse {
     data: Letter[];
 }
 
-export const getAllLetters = async (): Promise<GetAllLettersResponse> => {
-    const response = await api.get<GetAllLettersResponse>('/letters');
-    return response.data;
-};
-
 export interface CreateLetterData {
   nomorSurat: string;
   judul: string;
@@ -18,6 +13,19 @@ export interface CreateLetterData {
   tipeSurat: 'masuk' | 'keluar';
   file: File;
 }
+
+export interface UpdateLetterData {
+  nomorSurat?: string;
+  judul?: string;
+  tanggalSurat?: string;
+  kategori?: string;
+  tipeSurat?: 'masuk' | 'keluar';
+}
+
+export const getAllLetters = async (): Promise<GetAllLettersResponse> => {
+    const response = await api.get<GetAllLettersResponse>('/letters');
+    return response.data;
+};
 
 export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
   const formData = new FormData();
@@ -38,5 +46,15 @@ export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
 
 export const deleteLetter = async (id: string): Promise<{ message: string }> => {
     const response = await api.delete(`/letters/${id}`);
+    return response.data;
+};
+
+export const getLetterById = async (id: string): Promise<{ data: Letter }> => {
+    const response = await api.get<{ data: Letter }>(`/letters/${id}`);
+    return response.data;
+};
+
+export const updateLetter = async (id: string, data: UpdateLetterData): Promise<Letter> => {
+    const response = await api.put<Letter>(`/letters/${id}`, data);
     return response.data;
 };
