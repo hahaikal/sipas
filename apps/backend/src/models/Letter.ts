@@ -46,6 +46,6 @@ const letterSchema = new Schema<ILetterDocument>({
   },
 }, { timestamps: true });
 
-const Letter = model<ILetterDocument>('Letter', letterSchema);
+const Letter = model<ILetterDocument>('Sipas-Letter', letterSchema);
 
 export default Letter;
