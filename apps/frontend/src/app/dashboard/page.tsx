@@ -11,7 +11,10 @@ interface Letter {
   nomorSurat: string;
   judul: string;
   tanggalSurat: string;
+  kategori: string;
   tipeSurat: 'masuk' | 'keluar';
+  fileUrl: string;
+  createdBy: string;
 }
 
 export default function DashboardPage() {
@@ -23,12 +26,25 @@ export default function DashboardPage() {
     const fetchLetters = async () => {
       try {
         const response = await getAllLetters();
-        const mappedLetters: Letter[] = response.data.map((item: any) => ({
+        interface LetterResponse {
+          _id: string;
+          nomorSurat: string;
+          judul: string;
+          tanggalSurat: string;
+          tipeSurat: string;
+          kategori: string;
+          fileUrl: string;
+          createdBy: string;
+        }
+        const mappedLetters: Letter[] = (response.data as LetterResponse[]).map((item) => ({
           _id: item._id,
           nomorSurat: item.nomorSurat,
           judul: item.judul,
           tanggalSurat: item.tanggalSurat,
           tipeSurat: item.tipeSurat as 'masuk' | 'keluar',
+          kategori: item.kategori,
+          fileUrl: item.fileUrl,
+          createdBy: item.createdBy,
         }));
         setLetters(mappedLetters);
       } catch (err: unknown) {

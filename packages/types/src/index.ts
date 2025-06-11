@@ -6,3 +6,14 @@ export interface User {
   email: string;
   role: UserRole;
 }
+
+export interface Letter {
+  _id: string;
+  nomorSurat: string;
+  judul: string;
+  tanggalSurat: string;
+  kategori: string;
+  tipeSurat: 'masuk' | 'keluar';
+  fileUrl: string;
+  createdBy: string;
+}

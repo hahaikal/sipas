@@ -1,12 +1,5 @@
 import api from '@/lib/api';
-// import { ILetterDocument } from '@/../../backend/src/models/Letter'
-
-interface Letter {
-  _id: string;
-  nomorSurat: string;
-  judul: string;
-  tanggalSurat: string;
-}
+import { Letter } from '../../../../packages/types/src';
 
 interface GetAllLettersResponse {
     data: Letter[];
@@ -15,4 +8,30 @@ interface GetAllLettersResponse {
 export const getAllLetters = async (): Promise<GetAllLettersResponse> => {
     const response = await api.get<GetAllLettersResponse>('/letters');
     return response.data;
+};
+
+export interface CreateLetterData {
+  nomorSurat: string;
+  judul: string;
+  tanggalSurat: string;
+  kategori: string;
+  tipeSurat: 'masuk' | 'keluar';
+  file: File;
+}
+
+export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
+  const formData = new FormData();
+  formData.append('nomorSurat', data.nomorSurat);
+  formData.append('judul', data.judul);
+  formData.append('tanggalSurat', data.tanggalSurat);
+  formData.append('kategori', data.kategori);
+  formData.append('tipeSurat', data.tipeSurat);
+  formData.append('file', data.file);
+
+  const response = await api.post('/letters', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
 };
