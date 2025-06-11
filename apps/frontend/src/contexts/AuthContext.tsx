@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@sipas/types';
+import api from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -28,20 +29,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserFromCookies = async () => {
+    try {
+      const storedToken = localStorage.getItem('sipas_token');
+      const storedUser = localStorage.getItem('sipas_user');
+
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      }
+    } catch (error) {
+      console.error("Failed to parse user data from localStorage", error);
+      localStorage.removeItem('sipas_token');
+      localStorage.removeItem('sipas_user');
+    } finally {
       setIsLoading(false);
-    };
-    loadUserFromCookies();
+    }
   }, []);
 
   const login = (newToken: string, userData: User) => {
+    localStorage.setItem('sipas_token', newToken);
+    localStorage.setItem('sipas_user', JSON.stringify(userData));
+
     setToken(newToken);
     setUser(userData);
+
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   };
 
   const logout = () => {
+    localStorage.removeItem('sipas_token');
+    localStorage.removeItem('sipas_user');
+
     setToken(null);
     setUser(null);
+
+    delete api.defaults.headers.common['Authorization'];
   };
 
   const value = {
@@ -53,5 +76,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {isLoading ? <div>Loading session...</div> : children}
+    </AuthContext.Provider>
+  );
 };

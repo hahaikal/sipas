@@ -14,8 +14,6 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
   try {
     const extractedData = await extractDataFromPdf(filePath);
 
-    // --- TAHAP 2: Ambil data dari body (sebagai fallback atau data tambahan) ---
-    // Jika data dari body ada, gunakan itu. Jika tidak, gunakan hasil ekstraksi.
     const { kategori, tipeSurat } = req.body;
     const nomorSurat = req.body.nomorSurat || extractedData.nomorSurat;
     const judul = req.body.judul || extractedData.judul;
@@ -80,9 +78,6 @@ export const updateLetter = async (req: Request, res: Response, next: NextFuncti
             res.status(404);
             throw new Error('Surat tidak ditemukan');
         }
-
-        // Di sini kita bisa tambahkan logika otorisasi,
-        // misalnya, hanya admin atau pembuat surat yang bisa mengedit.
         
         const updatedLetter = await Letter.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
