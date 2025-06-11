@@ -35,3 +35,8 @@ export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
   });
   return response.data;
 };
+
+export const deleteLetter = async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/letters/${id}`);
+    return response.data;
+};

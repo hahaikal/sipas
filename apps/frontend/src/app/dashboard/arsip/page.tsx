@@ -1,10 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAllLetters } from '@/services/letterService';
+import { deleteLetter, getAllLetters } from '@/services/letterService';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 interface Letter {
   _id: string;
@@ -23,24 +37,25 @@ export default function ArsipPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchLetters = async () => {
-      setIsLoading(true);
-      try {
-        const response = await getAllLetters();
-        setAllLetters(response.data);
-        setFilteredLetters(response.data);
-      } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
-          setError((err.response as { data: { message?: string } }).data.message || 'Gagal memuat data arsip.');
-        } else {
-          setError('Gagal memuat data arsip.');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchLetters();
   }, []);
+
+  const fetchLetters = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getAllLetters();
+      setAllLetters(response.data);
+      setFilteredLetters(response.data);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
+        setError((err.response as { data: { message: string } }).data.message);
+      } else {
+        setError('Gagal memuat data arsip.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const results = allLetters.filter(letter =>
@@ -49,6 +64,17 @@ export default function ArsipPage() {
     );
     setFilteredLetters(results);
   }, [searchTerm, allLetters]);
+
+  const handleDelete = async (id: string) => {
+    try {
+        await deleteLetter(id);
+        // Hapus surat dari state lokal untuk update UI instan
+        setAllLetters(prev => prev.filter(letter => letter._id !== id));
+    } catch (err) {
+        console.error("Gagal menghapus surat:", err);
+        // Tampilkan notifikasi error (bisa menggunakan toast/alert)
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -74,7 +100,7 @@ export default function ArsipPage() {
                   <TableHead>Nomor Surat</TableHead>
                   <TableHead>Judul</TableHead>
                   <TableHead>Tanggal Surat</TableHead>
-                  <TableHead>Tipe</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -84,7 +110,30 @@ export default function ArsipPage() {
                       <TableCell>{letter.nomorSurat}</TableCell>
                       <TableCell className="font-medium">{letter.judul}</TableCell>
                       <TableCell>{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</TableCell>
-                      <TableCell>{letter.tipeSurat}</TableCell>
+                      <TableCell className="text-right">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tindakan ini tidak dapat dibatalkan. Ini akan menghapus surat
+                                secara permanen dari server.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(letter._id)}>
+                                Ya, Hapus
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (

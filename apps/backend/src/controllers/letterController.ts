@@ -99,12 +99,15 @@ export const deleteLetter = async (req: Request, res: Response, next: NextFuncti
             throw new Error('Surat tidak ditemukan');
         }
 
-        // Di sini kita akan tambahkan logika otorisasi,
-        // misalnya, hanya admin yang bisa menghapus.
-        // Juga, kita perlu menghapus file fisiknya dari server.
-        // fs.unlinkSync(letter.fileUrl); // Contoh (perlu penanganan error)
+        const filePath = letter.fileUrl;
 
         await letter.deleteOne();
+
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.error(`Gagal menghapus file: ${filePath}`, err);
+            }
+        });
 
         res.status(200).json({ message: 'Surat berhasil dihapus.' });
     } catch (error) {
