@@ -4,9 +4,8 @@ import { protect, admin } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Terapkan middleware 'protect' dan 'admin' pada rute ini
-// Ini berarti hanya admin yang sudah login yang bisa mengaksesnya
 router.route('/')
-  .get(protect, admin, userController.getAllUsers);
+  .get(protect, admin, userController.getAllUsers)
+  .post(protect, admin, userController.createUser);
 
 export default router;
