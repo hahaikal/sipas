@@ -11,13 +11,18 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
 
   const filePath = req.file.path;
 
+  let extractedData = null;
   try {
-    const extractedData = await extractDataFromPdf(filePath);
+    extractedData = await extractDataFromPdf(filePath);
+  } catch (extractionError) {
+    console.error("PDF extraction failed, falling back to req.body data:", extractionError);
+  }
 
+  try {
     const { kategori, tipeSurat } = req.body;
-    const nomorSurat = req.body.nomorSurat || extractedData.nomorSurat;
-    const judul = req.body.judul || extractedData.judul;
-    const tanggalSurat = req.body.tanggalSurat || extractedData.tanggalSurat;
+    const nomorSurat = req.body.nomorSurat || extractedData?.nomorSurat;
+    const judul = req.body.judul || extractedData?.judul;
+    const tanggalSurat = req.body.tanggalSurat || extractedData?.tanggalSurat;
 
     if (!nomorSurat || !judul || !tanggalSurat || !kategori || !tipeSurat) {
         throw new Error('Data surat tidak lengkap.');
