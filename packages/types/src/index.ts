@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'guru' | 'kepala sekolah';
 
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   phone: string;
