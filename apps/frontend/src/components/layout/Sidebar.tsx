@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Upload, Archive } from 'lucide-react';
+import { Home, Upload, Archive, User } from 'lucide-react';
 
 const Sidebar = () => {
   return (
@@ -25,6 +25,12 @@ const Sidebar = () => {
             <Link href="/dashboard/arsip" className="flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
               <Archive className="mr-3" />
               Daftar Arsip
+            </Link>
+          </li>
+          <li className="mb-4">
+            <Link href="/dashboard/user" className="flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <User className="mr-3" />
+              Manajemen Pengguna
             </Link>
           </li>
         </ul>
