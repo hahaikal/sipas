@@ -19,7 +19,7 @@ export const protect = asyncHandler(async (req: AuthenticatedRequest, res: Respo
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const secret = process.env.JWT_SECRET || 'your-default-secret-key';
+      const secret = process.env.JWT_SECRET || 'default-secret-key';
       const decoded = jwt.verify(token, secret) as JwtPayload;
 
       req.user = await User.findById(decoded.id).select('-password');

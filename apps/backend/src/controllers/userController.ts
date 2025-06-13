@@ -93,3 +93,26 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response, next:
         next(error);
     }
 };
+
+export const getUserByPhone = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        let phone = req.params.phone;
+
+        phone = phone.replace(/\D/g, '');
+
+        if (phone.startsWith('62')) {
+            phone = '0' + phone.slice(2);
+        }
+
+        const user = await User.findOne({ phone: phone }).select('-password');
+
+        if (!user) {
+            res.status(404);
+            throw new Error(`Pengguna dengan nomor telepon ${phone} tidak ditemukan.`);
+        }
+
+        res.status(200).json({ data: user });
+    } catch (error) {
+        next(error);
+    }
+};

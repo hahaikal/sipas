@@ -1,1 +1,0 @@
-console.log('SIPAS BOT is ready to be built!');

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Letter from '../models/Letter';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
-import { extractDataFromPdf } from '../utils/pdfExtractor';
+import { convertToDate } from '../utils/pdfExtractor';
 import fs from 'fs';
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -11,21 +11,15 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
 
   const filePath = req.file.path;
 
-  let extractedData = null;
   try {
-    extractedData = await extractDataFromPdf(filePath);
-  } catch (extractionError) {
-    console.error("PDF extraction failed, falling back to req.body data:", extractionError);
-  }
-
-  try {
-    const { kategori, tipeSurat } = req.body;
-    const nomorSurat = req.body.nomorSurat || extractedData?.nomorSurat;
-    const judul = req.body.judul || extractedData?.judul;
-    const tanggalSurat = req.body.tanggalSurat || extractedData?.tanggalSurat;
+    const kategori = req.body.kategori || "Umum";
+    const tipeSurat = req.body.tipeSurat || "keluar";
+    const nomorSurat = req.body.nomorSurat;
+    const judul = req.body.judul;
+    const tanggalSurat = convertToDate(req.body.tanggalSurat);
 
     if (!nomorSurat || !judul || !tanggalSurat || !kategori || !tipeSurat) {
-        throw new Error('Data surat tidak lengkap.');
+        throw new Error(`Data surat tidak lengkap. nomorSurat: ${nomorSurat}, judul: ${judul}, tanggalSurat: ${tanggalSurat}, kategori: ${kategori}, tipeSurat: ${tipeSurat}`);
     }
 
     const newLetter = new Letter({
@@ -115,6 +109,19 @@ export const deleteLetter = async (req: Request, res: Response, next: NextFuncti
         });
 
         res.status(200).json({ message: 'Surat berhasil dihapus.' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getLetterByNumber = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const letter = await Letter.findOne({ nomorSurat: req.params.nomor }).populate('createdBy', 'name');
+        if (!letter) {
+            res.status(404);
+            throw new Error('Surat dengan nomor tersebut tidak ditemukan');
+        }
+        res.status(200).json({ data: letter });
     } catch (error) {
         next(error);
     }

@@ -22,4 +22,6 @@ router.route('/:id')
   .put(letterController.updateLetter)
   .delete(letterController.deleteLetter);
 
+router.get('/by-nomor/:nomor', letterController.getLetterByNumber);
+
 export default router;

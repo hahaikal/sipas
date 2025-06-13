@@ -11,7 +11,7 @@ const cleanText = (text: string): string => {
   return text.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
 };
 
-const convertToDate = (dateString: string): string | null => {
+export const convertToDate = (dateString: string): string | null => {
   const months: { [key: string]: string } = {
     'januari': '01', 'februari': '02', 'maret': '03', 'april': '04', 'mei': '05', 'juni': '06',
     'juli': '07', 'agustus': '08', 'september': '09', 'oktober': '10', 'november': '11', 'desember': '12'
@@ -21,7 +21,7 @@ const convertToDate = (dateString: string): string | null => {
     const [day, month, year] = parts;
     const monthNumber = months[month];
     if (monthNumber) {
-      return `<span class="math-inline">\{year\}\-</span>{monthNumber}-${day.padStart(2, '0')}`;
+      return `${year}-${monthNumber}-${day.padStart(2, '0')}`;
     }
   }
   return null;
