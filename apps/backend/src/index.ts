@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import letterRoutes from './routes/letterRoutes';
 import userRoutes from './routes/userRoutes'; 
+import newsRoutes from './routes/newsRoutes';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/letters', letterRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/news', newsRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
