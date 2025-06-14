@@ -48,6 +48,10 @@ const Sidebar = () => {
                         <GalleryHorizontal className="mr-3 h-5 w-5" />
                         Galeri
                     </Link>
+                    <Link href="/dashboard/pencapaian" className="flex items-center p-3 ...">
+                        <GalleryHorizontal className="mr-3 h-5 w-5" />
+                        Achievment
+                    </Link>
                 </AccordionContent>
             </AccordionItem>
         </Accordion>

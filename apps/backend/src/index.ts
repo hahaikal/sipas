@@ -8,6 +8,7 @@ import letterRoutes from './routes/letterRoutes';
 import userRoutes from './routes/userRoutes'; 
 import newsRoutes from './routes/newsRoutes';
 import galleryRoutes from './routes/galleryRoutes';
+import achievementRoutes from './routes/achievementRoutes'; 
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
