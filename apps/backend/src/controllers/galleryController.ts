@@ -16,7 +16,7 @@ export const createGalleryItem = async (req: AuthenticatedRequest, res: Response
 
         const newItem = new Gallery({
             caption,
-            imageUrl: req.file.path,
+            imageUrl: '/' + req.file.path.replace(/\\/g, '/'),
             uploadedBy: req.user?.id,
         });
 
