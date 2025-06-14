@@ -14,7 +14,7 @@ export default function AddNewsPage() {
         setIsLoading(true);
         try {
             await createNews(data);
-            router.push('/dashboard/berita');
+            router.push('/dashboard/news');
         } catch (error) {
             console.error('Failed to create news', error);
             alert('Gagal membuat berita.');

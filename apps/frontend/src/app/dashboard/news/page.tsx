@@ -26,7 +26,7 @@ export default function ManageNewsPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Manajemen Berita</h1>
-                <Link href="/dashboard/berita/tambah">
+                <Link href="/dashboard/news/addNews">
                     <Button><PlusCircle className="mr-2 h-4 w-4" />Tambah Berita</Button>
                 </Link>
             </div>
@@ -39,7 +39,7 @@ export default function ManageNewsPage() {
                         <TableRow key={news._id}>
                             <TableCell>{news.title}</TableCell>
                             <TableCell className="flex gap-2 justify-end">
-                                <Link href={`/dashboard/berita/${news._id ?? ''}/edit`}>
+                                <Link href={`/dashboard/news/${news._id ?? ''}/edit`}>
                                     <Button variant="outline" size="icon"><Edit className="h-4 w-4" /></Button>
                                 </Link>
                                 <Button variant="destructive" size="icon" onClick={() => news._id && handleDelete(news._id)}>
