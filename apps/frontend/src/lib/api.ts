@@ -9,7 +9,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('sipas_token');
+    let token = null;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      token = localStorage.getItem('sipas_token');
+    }
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
