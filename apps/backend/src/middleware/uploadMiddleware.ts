@@ -32,3 +32,19 @@ export const upload = multer({
     fileSize: 1024 * 1024 * 5,
   },
 });
+
+const imageFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'image/gif') {
+        cb(null, true);
+    } else {
+        cb(new Error('Hanya file gambar (jpg, png, gif) yang diizinkan!'));
+    }
+};
+
+export const uploadImage = multer({
+    storage: storage,
+    fileFilter: imageFileFilter,
+    limits: {
+        fileSize: 1024 * 1024 * 5,
+    },
+});
