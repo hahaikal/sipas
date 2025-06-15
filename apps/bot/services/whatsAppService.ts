@@ -38,33 +38,30 @@ export async function handleIncomingMessage(
     }
   }
 
-    if (messageContent?.documentMessage?.mimetype === 'application/pdf') {
-      let phoneNumber = sender.split('@')[0];
-      if (phoneNumber.startsWith('62')) {
-        phoneNumber = '0' + phoneNumber.slice(2);
-      }
-      try {
-        await axios.get(`${process.env.API_GET_PHONE_NUMBER}/${phoneNumber}`, {
-          headers: {
-            'x-api-key': process.env.BOT_API_KEY
-          }
-        });
-      } catch (error: any) {
-        const backendMessage = error.response?.data?.message;
-        await sock.sendMessage(sender, { text: backendMessage });
-        console.error("Error validating phone number:", error.message);
-        return;
-      }
+  if (messageContent?.documentMessage?.mimetype === 'application/pdf') {
+    let phoneNumber = sender.split('@')[0];
+    if (phoneNumber.startsWith('62')) {
+      phoneNumber = '0' + phoneNumber.slice(2);
+    }
+    
+    try {
+      await axios.get(`${process.env.API_URL}/users/by-phone/${phoneNumber}`, {
+        headers: {
+          'x-api-key': process.env.BOT_API_KEY
+        }
+      });
+    } catch (error: any) {
+      const backendMessage = error.response?.data?.message || 'Nomor Anda tidak terdaftar di sistem.';
+      await sock.sendMessage(sender, { text: backendMessage });
+      console.error("Error validating phone number:", error.message);
+      return;
+    }
 
     const buffer = await downloadMediaMessage(msg, 'buffer', {}, {
       logger: {
         ...console,
         level: 'info',
-        child: () => ({
-          ...console,
-          level: 'info',
-          child: () => { return this; }
-        })
+        child: () => ({ ...console, level: 'info', child: () => { return this; } })
       },
       reuploadRequest: sock.updateMediaMessage
     });
@@ -92,40 +89,41 @@ export async function handleIncomingMessage(
     formData.append('judul', judul);
     formData.append('nomorSurat', nomor);
     formData.append('tanggalSurat', tanggal);
+    formData.append('userPhone', phoneNumber);
     formData.append('file', fs.createReadStream(filePath));
 
     try {
       const response = await axios.post(
-        process.env.API_SEND_FILE as string,
+        `${process.env.API_URL}/letters/bot-upload`,
         formData,
         {
           headers: {
             ...formData.getHeaders(),
-            'Authorization': `Bearer ${process.env.JWT_SECRET}`
+            'x-api-key': process.env.BOT_API_KEY,
           }
         }
       );
 
-if (response.status === 201) {
-  fs.unlinkSync(filePath);
-  const judul = response.data.data?.judul || 'Judul tidak tersedia';
-  const nomorSurat = response.data.data?.nomorSurat || 'Nomor Surat tidak tersedia';
-  const messageToSend = `${response.data.message}\nJudul: ${judul}\nNomor Surat: ${nomorSurat}`;
-  await sock.sendMessage(sender, { text: messageToSend });
-} else {
-  fs.unlinkSync(filePath);
-  await sock.sendMessage(sender, { text: `Gagal mengirim file: ${response.statusText}` });
-}
+      if (response.status === 201) {
+        const judulRes = response.data.data?.judul || 'Judul tidak tersedia';
+        const nomorSuratRes = response.data.data?.nomorSurat || 'Nomor Surat tidak tersedia';
+        const messageToSend = `${response.data.message}\nJudul: ${judulRes}\nNomor Surat: ${nomorSuratRes}`;
+        await sock.sendMessage(sender, { text: messageToSend });
+      } else {
+        await sock.sendMessage(sender, { text: `Gagal mengirim file: ${response.statusText}` });
+      }
     } catch (error: any) {
-      await sock.sendMessage(sender, { text: error.response?.data?.message || 'Gagal mengirim file' });
-      fs.unlinkSync(filePath);
+      const errorMessage = error.response?.data?.message || 'Gagal mengirim file ke server.';
+      await sock.sendMessage(sender, { text: errorMessage });
       if (error.response) {
-        console.error('Error uploading file to API:', error.response.status, error.response.data, reply);
+        console.error('Error uploading file to API:', error.response.status, error.response.data);
       } else if (error.request) {
         console.error('No response received from API:', error.request);
       } else {
         console.error('Error setting up request to API:', error.message);
       }
+    } finally {
+        fs.unlinkSync(filePath);
     }
   }
 }
