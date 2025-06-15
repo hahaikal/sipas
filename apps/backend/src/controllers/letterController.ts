@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import Letter from '../models/Letter';
+import User from '../models/User';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
-import { convertToDate } from '../utils/pdfExtractor';
+import { convertToDate } from '../utils/formatters';
 import fs from 'fs';
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -10,16 +11,27 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
   }
 
   const filePath = req.file.path;
-
+  const { nomorSurat, judul, kategori, tipeSurat } = req.body;
+  
   try {
-    const kategori = req.body.kategori || "Umum";
-    const tipeSurat = req.body.tipeSurat || "keluar";
-    const nomorSurat = req.body.nomorSurat;
-    const judul = req.body.judul;
-    const tanggalSurat = convertToDate(req.body.tanggalSurat);
+    const existingLetter = await Letter.findOne({ nomorSurat });
+    if (existingLetter) {
+      fs.unlinkSync(filePath);
+      res.status(409);
+      throw new Error(`Surat dengan nomor "${nomorSurat}" sudah ada.`);
+    }
 
-    if (!nomorSurat || !judul || !tanggalSurat || !kategori || !tipeSurat) {
-        throw new Error(`Data surat tidak lengkap. nomorSurat: ${nomorSurat}, judul: ${judul}, tanggalSurat: ${tanggalSurat}, kategori: ${kategori}, tipeSurat: ${tipeSurat}`);
+    const tanggalSurat = convertToDate(req.body.tanggalSurat);
+    if (!tanggalSurat) {
+        fs.unlinkSync(filePath);
+        res.status(400);
+        throw new Error('Format tanggal tidak valid. Harap gunakan format YYYY-MM-DD atau "DD NamaBulan YYYY".');
+    }
+
+    if (!nomorSurat || !judul || !kategori || !tipeSurat) {
+        fs.unlinkSync(filePath);
+        res.status(400);
+        throw new Error('Data surat tidak lengkap: nomorSurat, judul, kategori, dan tipeSurat wajib diisi.');
     }
 
     const newLetter = new Letter({
@@ -33,16 +45,14 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
     });
 
     await newLetter.save();
-    res.status(201).json({ message: 'Surat berhasil diarsipkan dengan ekstraksi data.', data: newLetter });
+    res.status(201).json({ message: 'Surat berhasil diarsipkan.', data: newLetter });
 
   } catch (error: any) {
-    console.error("Error during letter creation:", error.message);
-    fs.unlink(filePath, (unlinkErr) => {
-        if (unlinkErr) {
-            console.error("Failed to delete orphaned file:", filePath, unlinkErr);
-        }
-    });
-
+    if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (unlinkErr) => {
+            if (unlinkErr) console.error("Gagal menghapus file setelah error:", filePath, unlinkErr);
+        });
+    }
     next(error);
   }
 };
@@ -125,4 +135,57 @@ export const getLetterByNumber = async (req: Request, res: Response, next: NextF
     } catch (error) {
         next(error);
     }
+};
+
+export const createLetterFromBot = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'File surat (PDF) harus diunggah.' });
+  }
+
+  const filePath = req.file.path;
+  const { nomorSurat, judul, userPhone } = req.body;
+  
+  try {
+    const user = await User.findOne({ phone: userPhone });
+    if (!user) {
+        fs.unlinkSync(filePath);
+        res.status(404);
+        throw new Error(`Pengguna dengan nomor telepon ${userPhone} tidak terdaftar di sistem.`);
+    }
+
+    const existingLetter = await Letter.findOne({ nomorSurat });
+    if (existingLetter) {
+      fs.unlinkSync(filePath);
+      res.status(409);
+      throw new Error(`Surat dengan nomor "${nomorSurat}" sudah ada.`);
+    }
+      
+    const tanggalSurat = convertToDate(req.body.tanggalSurat);
+    if (!tanggalSurat) {
+      fs.unlinkSync(filePath);
+      res.status(400);
+      throw new Error('Gagal mengekstrak tanggal dari PDF atau formatnya tidak valid.');
+    }
+      
+    const newLetter = new Letter({
+      nomorSurat,
+      judul,
+      tanggalSurat,
+      kategori: req.body.kategori || "Umum",
+      tipeSurat: req.body.tipeSurat || "masuk",
+      fileUrl: filePath,
+      createdBy: user._id,
+    });
+
+    await newLetter.save();
+    res.status(201).json({ message: 'Surat berhasil diarsipkan melalui Bot.', data: newLetter });
+      
+  } catch (error) {
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, (err) => {
+        if (err) console.error("Gagal menghapus file bot setelah error:", filePath, err);
+      });
+    }
+    next(error);
+  }
 };

@@ -2,10 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import Gallery from '../models/Gallery';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import fs from 'fs';
+import path from 'path';
 
-// @desc    Upload a new gallery item
-// @route   POST /api/gallery
-// @access  Private/Admin
 export const createGalleryItem = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { caption } = req.body;
@@ -27,9 +25,6 @@ export const createGalleryItem = async (req: AuthenticatedRequest, res: Response
     }
 };
 
-// @desc    Get all gallery items
-// @route   GET /api/gallery
-// @access  Public
 export const getAllGalleryItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const items = await Gallery.find({}).sort({ createdAt: -1 });
@@ -39,9 +34,7 @@ export const getAllGalleryItems = async (req: Request, res: Response, next: Next
     }
 };
 
-// @desc    Delete a gallery item
-// @route   DELETE /api/gallery/:id
-// @access  Private/Admin
+
 export const deleteGalleryItem = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const item = await Gallery.findById(req.params.id);
@@ -51,12 +44,17 @@ export const deleteGalleryItem = async (req: AuthenticatedRequest, res: Response
             throw new Error('Item galeri tidak ditemukan');
         }
 
-        const imagePath = item.imageUrl;
+        const imagePath = path.join(__dirname, '..', '..', item.imageUrl);
+
         await item.deleteOne();
 
-        fs.unlink(imagePath, (err) => {
-            if (err) console.error(`Gagal menghapus file gambar: ${imagePath}`, err);
-        });
+        if (fs.existsSync(imagePath)) {
+            fs.unlink(imagePath, (err) => {
+                if (err) console.error(`Gagal menghapus file gambar: ${imagePath}`, err);
+            });
+        } else {
+            console.warn(`File tidak ditemukan untuk dihapus: ${imagePath}`);
+        }
 
         res.status(200).json({ message: 'Item galeri berhasil dihapus.' });
     } catch (error) {
