@@ -58,3 +58,8 @@ export const updateLetter = async (id: string, data: UpdateLetterData): Promise<
     const response = await api.put<Letter>(`/letters/${id}`, data);
     return response.data;
 };
+
+export const getLetterViewUrl = async (id: string): Promise<{ url: string }> => {
+    const response = await api.get<{ url: string }>(`/letters/${id}/view`);
+    return response.data;
+};

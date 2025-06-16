@@ -103,7 +103,7 @@ export default function ManageGalleryPage() {
                                 return (
                                     <div key={item._id} className="relative group border rounded-lg overflow-hidden aspect-square">
                                         <Image 
-                                            src={`http://localhost:5000${item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl}`}
+                                            src={item.imageUrl}
                                             alt={item.caption}
                                             width={300}
                                             height={300}

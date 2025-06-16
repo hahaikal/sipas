@@ -62,9 +62,10 @@ export default async function HomePage() {
                 {galleryItems.slice(0, 8).map((item) => (
                     <div key={item._id} className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
                         <Image
-                            src={`http://localhost:5000${item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl}`}
+                            src={item.imageUrl}
                             alt={item.caption}
-                            fill
+                            width={300}
+                            height={300}
                             unoptimized
                             className="object-cover transition-transform duration-300 hover:scale-105"
                         />
