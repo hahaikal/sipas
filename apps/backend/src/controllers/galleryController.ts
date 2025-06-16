@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Gallery from '../models/Gallery';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
-import fs from 'fs';
-import path from 'path';
+import { storageService } from '../services/storageService';
 
 export const createGalleryItem = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -12,9 +11,11 @@ export const createGalleryItem = async (req: AuthenticatedRequest, res: Response
             return;
         }
 
+        const publicId = await storageService.upload(req.file, 'cloudinary');
+
         const newItem = new Gallery({
             caption,
-            imageUrl: '/' + req.file.path.replace(/\\/g, '/'),
+            imageUrl: publicId,
             uploadedBy: req.user?.id,
         });
 
@@ -28,12 +29,18 @@ export const createGalleryItem = async (req: AuthenticatedRequest, res: Response
 export const getAllGalleryItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const items = await Gallery.find({}).sort({ createdAt: -1 });
-        res.status(200).json({ data: items });
+        const itemsWithUrls = await Promise.all(items.map(async (item) => {
+            const imageUrl = await storageService.getAccessUrl(item.imageUrl, 'cloudinary');
+            return {
+                ...item.toObject(),
+                imageUrl,
+            };
+        }));
+        res.status(200).json({ data: itemsWithUrls });
     } catch (error) {
         next(error);
     }
 };
-
 
 export const deleteGalleryItem = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -44,17 +51,9 @@ export const deleteGalleryItem = async (req: AuthenticatedRequest, res: Response
             throw new Error('Item galeri tidak ditemukan');
         }
 
-        const imagePath = path.join(__dirname, '..', '..', item.imageUrl);
+        await storageService.delete(item.imageUrl, 'cloudinary');
 
         await item.deleteOne();
-
-        if (fs.existsSync(imagePath)) {
-            fs.unlink(imagePath, (err) => {
-                if (err) console.error(`Gagal menghapus file gambar: ${imagePath}`, err);
-            });
-        } else {
-            console.warn(`File tidak ditemukan untuk dihapus: ${imagePath}`);
-        }
 
         res.status(200).json({ message: 'Item galeri berhasil dihapus.' });
     } catch (error) {
