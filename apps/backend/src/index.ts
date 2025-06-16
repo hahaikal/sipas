@@ -1,8 +1,11 @@
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import letterRoutes from './routes/letterRoutes';
 import userRoutes from './routes/userRoutes'; 
@@ -10,8 +13,6 @@ import newsRoutes from './routes/newsRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import achievementRoutes from './routes/achievementRoutes';
 import { redisClient, connectRedis } from './config/redisClient';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
