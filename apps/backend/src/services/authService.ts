@@ -2,6 +2,7 @@ import User, { IUserDocument } from '../models/User';
 import Otp from '../models/Otp';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../utils/token';
+import { emailService } from './emailService';
 
 export const registerUser = async (email: string, name: string, phone: string, password: string, role: string) => {
   const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
@@ -11,9 +12,10 @@ export const registerUser = async (email: string, name: string, phone: string, p
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await Otp.findOneAndUpdate({ email }, { email, otp }, { upsert: true, new: true, setDefaultsOnInsert: true });
-  console.log(`OTP untuk ${email} adalah: ${otp}`);
 
-  return { message: `Kode OTP telah dikirim ke ${email}. Silakan verifikasi. dan OTP adalah ${otp}` };
+  await emailService.sendOtpEmail(email, otp);
+
+  return { message: `Kode OTP telah dikirim ke ${email}. Silakan periksa email Anda.` };
 };
 
 export const verifyOtpAndCreateUser = async (email: string, otp: string, userData: any) => {

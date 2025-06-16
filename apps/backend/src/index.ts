@@ -8,7 +8,8 @@ import letterRoutes from './routes/letterRoutes';
 import userRoutes from './routes/userRoutes'; 
 import newsRoutes from './routes/newsRoutes';
 import galleryRoutes from './routes/galleryRoutes';
-import achievementRoutes from './routes/achievementRoutes'; 
+import achievementRoutes from './routes/achievementRoutes';
+import { redisClient, connectRedis } from './config/redisClient';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+/* app.use('/uploads', express.static('uploads')); */
 
 app.use('/api/auth', authRoutes);
 app.use('/api/letters', letterRoutes);
@@ -35,14 +36,20 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   res.status(500).json({ message: err.message || 'Terjadi kesalahan pada server.' });
 });
 
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('MongoDB connected successfully.');
-    app.listen(PORT, () => {
-      console.log(`Backend server is running on http://localhost:${PORT}`);
+async function startServer() {
+  await connectRedis();
+
+  mongoose.connect(MONGO_URI)
+    .then(() => {
+      console.log('MongoDB connected successfully.');
+      app.listen(PORT, () => {
+        console.log(`Backend server is running on http://localhost:${PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('MongoDB connection error:', err);
+      process.exit(1);
     });
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
+}
+
+startServer();

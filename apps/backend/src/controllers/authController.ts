@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/authService';
-
-const temporaryUserStore: { [email: string]: any } = {};
+import { redisClient } from '../config/redisClient';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, name, phone, password, role } = req.body;
-    temporaryUserStore[email] = { name, phone, password, role };
+    const userData = { name, phone, password, role };
+    const redisKey = `registration:${email}`;
+
+    await redisClient.set(redisKey, JSON.stringify(userData), { EX: 300 });
 
     const result = await authService.registerUser(email, name, phone, password, role);
     res.status(200).json(result);
@@ -18,17 +20,19 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 export const verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, otp } = req.body;
-    const userData = temporaryUserStore[email];
+    const redisKey = `registration:${email}`;
+    
+    const userDataString = await redisClient.get(redisKey);
 
-    if (!userData) {
+    if (!userDataString) {
       res.status(400).json({ message: 'Sesi registrasi tidak ditemukan atau sudah kedaluwarsa.' });
       return;
     }
+    const userData = JSON.parse(userDataString);
 
     const result = await authService.verifyOtpAndCreateUser(email, otp, userData);
-
-    delete temporaryUserStore[email];
-
+    
+    await redisClient.del(redisKey);
     res.status(201).json(result);
   } catch (error) {
     next(error);
