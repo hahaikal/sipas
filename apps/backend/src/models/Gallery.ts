@@ -4,6 +4,7 @@ interface IGalleryItem {
   imageUrl: string;
   caption: string;
   uploadedBy: Types.ObjectId;
+  schoolId: Types.ObjectId;
 }
 
 export interface IGalleryItemDocument extends IGalleryItem, Document {}
@@ -21,6 +22,12 @@ const gallerySchema = new Schema<IGalleryItemDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  schoolId: {
+    type: Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    index: true,
   },
 }, { timestamps: true });
 

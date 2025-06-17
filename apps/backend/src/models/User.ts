@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types  } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { UserRole } from '@sipas/types';
 
@@ -8,6 +8,7 @@ interface IUser {
   phone: string;
   password?: string;
   role: UserRole;
+  schoolId: Types.ObjectId;
 }
 
 export interface IUserDocument extends IUser, Document {}
@@ -37,6 +38,12 @@ const userSchema = new Schema<IUserDocument>({
     type: String,
     enum: ['admin', 'guru', 'kepala sekolah'],
     default: 'guru',
+  },
+  schoolId: {
+    type: Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    index: true,
   },
 }, { timestamps: true });
 

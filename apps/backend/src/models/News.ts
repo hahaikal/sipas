@@ -5,6 +5,7 @@ interface INews {
   content: string;
   imageUrl?: string;
   author: Types.ObjectId;
+  schoolId: Types.ObjectId
 }
 
 export interface INewsDocument extends INews, Document {}
@@ -25,6 +26,12 @@ const newsSchema = new Schema<INewsDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  schoolId: {
+    type: Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    index: true,
   },
 }, { timestamps: true });
 

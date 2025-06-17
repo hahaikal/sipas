@@ -8,6 +8,7 @@ interface ILetter {
   tipeSurat: 'masuk' | 'keluar';
   fileUrl: string;
   createdBy: Types.ObjectId;
+  schoolId: Types.ObjectId;
 }
 
 export interface ILetterDocument extends ILetter, Document {}
@@ -43,6 +44,12 @@ const letterSchema = new Schema<ILetterDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  schoolId: {
+    type: Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    index: true,
   },
 }, { timestamps: true });
 

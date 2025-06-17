@@ -7,6 +7,7 @@ interface IAchievement {
   level: 'Sekolah' | 'Kecamatan' | 'Kabupaten/Kota' | 'Provinsi' | 'Nasional' | 'Internasional';
   achievedBy: string;
   addedBy: Types.ObjectId;
+  schoolId: Types.ObjectId
 }
 
 export interface IAchievementDocument extends IAchievement, Document {}
@@ -37,6 +38,12 @@ const achievementSchema = new Schema<IAchievementDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  schoolId: {
+    type: Schema.Types.ObjectId,
+    ref: 'School',
+    required: true,
+    index: true,
   },
 }, { timestamps: true });
 
