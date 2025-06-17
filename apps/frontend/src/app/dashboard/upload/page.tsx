@@ -46,7 +46,7 @@ export default function UploadPage() {
     setSuccess(null);
 
     try {
-      const dataToSubmit: CreateLetterData = { ...formData, file };
+      const dataToSubmit: CreateLetterData & { subdomain: string } = { ...formData, file, subdomain: 'smaharapanbangsa' };
       await createLetter(dataToSubmit);
       setSuccess('Surat berhasil diarsipkan! Mengarahkan ke daftar arsip...');
       setTimeout(() => router.push('/dashboard/arsip'), 2000);

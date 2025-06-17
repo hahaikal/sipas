@@ -1,19 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import Letter from '../models/Letter';
 import User from '../models/User';
+import School from '../models/School';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { convertToDate } from '../utils/formatters';
 import { storageService } from '../services/storageService';
+
+async function getSchoolIdFromSubdomain(req: AuthenticatedRequest) {
+  const subdomain = req.body.subdomain;
+  if (!subdomain) {
+    throw new Error('Subdomain tidak ditemukan di request body');
+  }
+
+  const school = await School.findOne({ subdomain: subdomain, status: 'active' });
+  if (!school) {
+    throw new Error(`Sekolah dengan subdomain "${subdomain}" tidak ditemukan atau tidak aktif`);
+  }
+  return school._id;
+}
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.file) {
     return res.status(400).json({ message: 'File surat (PDF) harus diunggah.' });
   }
 
-  const { nomorSurat, judul, kategori, tipeSurat } = req.body;
-  
   try {
-    const existingLetter = await Letter.findOne({ nomorSurat });
+    const schoolId = await getSchoolIdFromSubdomain(req);
+    const { nomorSurat, judul, kategori, tipeSurat } = req.body;
+
+    const existingLetter = await Letter.findOne({ nomorSurat, schoolId: schoolId });
     if (existingLetter) {
       await storageService.delete(req.file.filename, 'b2');
       res.status(409);
@@ -28,6 +43,8 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
     }
 
     const fileIdentifier = await storageService.upload(req.file, 'b2');
+    const fileUrlObj = JSON.parse(fileIdentifier);
+
     const newLetter = new Letter({
       nomorSurat,
       judul,
@@ -36,6 +53,7 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
       tipeSurat,
       fileUrl: fileIdentifier,
       createdBy: req.user?.id,
+      schoolId: schoolId,
     });
 
     await newLetter.save();
@@ -43,7 +61,9 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
 
   } catch (error: any) {
     try {
-      await storageService.delete(req.file.filename, 'b2');
+      // Do not delete if fileIdentifier is not available
+      // req.file.filename is local temp file, not B2 file identifier
+      // So deletion on B2 is not possible here
     } catch (delErr) {
       console.error("Gagal menghapus file setelah error:", req.file.filename, delErr);
     }
@@ -51,18 +71,20 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
   }
 };
 
-export const getAllLetters = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllLetters = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const letters = await Letter.find().populate('createdBy', 'name email');
+        const schoolId = await getSchoolIdFromSubdomain(req);
+        const letters = await Letter.find({ schoolId: schoolId }).populate('createdBy', 'name email');
         res.status(200).json({ data: letters });
     } catch (error) {
         next(error);
     }
 }
 
-export const getLetterById = async (req: Request, res: Response, next: NextFunction) => {
+export const getLetterById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const letter = await Letter.findById(req.params.id).populate('createdBy', 'name email');
+        const schoolId = await getSchoolIdFromSubdomain(req);
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: schoolId }).populate('createdBy', 'name email');
         if (!letter) {
             res.status(404);
             throw new Error('Surat tidak ditemukan');
@@ -73,7 +95,7 @@ export const getLetterById = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-export const updateLetter = async (req: Request, res: Response, next: NextFunction) => {
+export const updateLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const letter = await Letter.findById(req.params.id);
 
@@ -93,9 +115,10 @@ export const updateLetter = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-export const deleteLetter = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const letter = await Letter.findById(req.params.id);
+        const schoolId = await getSchoolIdFromSubdomain(req);
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: schoolId });
 
         if (!letter) {
             res.status(404);
@@ -103,9 +126,18 @@ export const deleteLetter = async (req: Request, res: Response, next: NextFuncti
         }
 
         const fileIdentifier = letter.fileUrl;
+        let fileId = '';
+        let fileName = '';
+        try {
+          const parsed = JSON.parse(fileIdentifier);
+          fileId = parsed.fileId;
+          fileName = parsed.fileName;
+        } catch (e) {
+          console.error('Failed to parse fileIdentifier in deleteLetter:', fileIdentifier);
+          throw new Error('Invalid file identifier format.');
+        }
 
-        await storageService.delete(fileIdentifier, 'b2');
-
+        await storageService.delete(fileIdentifier, 'b2', fileName);
         await letter.deleteOne();
 
         res.status(200).json({ message: 'Surat berhasil dihapus.' });
@@ -114,7 +146,7 @@ export const deleteLetter = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-export const getLetterByNumber = async (req: Request, res: Response, next: NextFunction) => {
+export const getLetterByNumber = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const letter = await Letter.findOne({ nomorSurat: req.params.nomor }).populate('createdBy', 'name');
         if (!letter) {
@@ -157,6 +189,7 @@ export const createLetterFromBot = async (req: Request, res: Response, next: Nex
     }
       
     const fileIdentifier = await storageService.upload(req.file, 'b2');
+    const fileUrlObj = JSON.parse(fileIdentifier);
 
     const newLetter = new Letter({
       nomorSurat,
@@ -173,7 +206,9 @@ export const createLetterFromBot = async (req: Request, res: Response, next: Nex
       
   } catch (error) {
     try {
-      await storageService.delete(req.file.filename, 'b2');
+      // Do not delete if fileIdentifier is not available
+      // req.file.filename is local temp file, not B2 file identifier
+      // So deletion on B2 is not possible here
     } catch (delErr) {
       console.error("Gagal menghapus file bot setelah error:", req.file.filename, delErr);
     }

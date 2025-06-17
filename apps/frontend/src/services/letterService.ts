@@ -22,12 +22,12 @@ export interface UpdateLetterData {
   tipeSurat?: 'masuk' | 'keluar';
 }
 
-export const getAllLetters = async (): Promise<GetAllLettersResponse> => {
-    const response = await api.get<GetAllLettersResponse>('/letters');
+export const getAllLetters = async (subdomain: string): Promise<GetAllLettersResponse> => {
+    const response = await api.post<GetAllLettersResponse>('/letters/list', { subdomain });
     return response.data;
 };
 
-export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
+export const createLetter = async (data: CreateLetterData & { subdomain: string }): Promise<Letter> => {
   const formData = new FormData();
   formData.append('nomorSurat', data.nomorSurat);
   formData.append('judul', data.judul);
@@ -35,6 +35,7 @@ export const createLetter = async (data: CreateLetterData): Promise<Letter> => {
   formData.append('kategori', data.kategori);
   formData.append('tipeSurat', data.tipeSurat);
   formData.append('file', data.file);
+  formData.append('subdomain', data.subdomain);
 
   const response = await api.post('/letters', formData, {
     headers: {

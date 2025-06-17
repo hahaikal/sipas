@@ -15,8 +15,10 @@ function asyncHandler(fn: any) {
 router.post('/bot-upload', verifyApiKey, upload.single('file'), asyncHandler(letterController.createLetterFromBot));
 
 router.route('/')
-  .post(protect, upload.single('file'), asyncHandler(letterController.createLetter))
-  .get(protect, letterController.getAllLetters);
+  .post(protect, upload.single('file'), asyncHandler(letterController.createLetter));
+
+router.route('/list')
+  .post(protect, asyncHandler(letterController.getAllLetters));
 
 router.route('/:id')
   .all(protect)
