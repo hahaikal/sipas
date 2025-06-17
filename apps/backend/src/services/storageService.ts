@@ -1,8 +1,8 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import axios from 'axios';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 cloudinary.config({ 
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
@@ -12,57 +12,148 @@ cloudinary.config({
 
 interface IStorageProvider {
   upload(file: Express.Multer.File): Promise<string>;
-  delete(fileIdentifier: string): Promise<void>;
-  getAccessUrl(fileIdentifier: string): Promise<string>;
+  delete(fileIdentifier: string, fileName: string): Promise<void>;
+  getAccessUrl(fileName: string): Promise<string>;
 }
 
 class BackblazeB2Provider implements IStorageProvider {
-  private client: S3Client;
+  private apiUrl: string = '';
+  private authorizationToken: string = '';
+  private downloadUrl: string = '';
+  private bucketId: string;
   private bucketName: string;
 
   constructor() {
-    if (!process.env.B2_KEY_ID || !process.env.B2_APP_KEY || !process.env.B2_REGION || !process.env.B2_BUCKET_NAME) {
-      throw new Error("Konfigurasi Backblaze B2 tidak lengkap di .env");
+    if (!process.env.B2_KEY_ID || !process.env.B2_APP_KEY || !process.env.B2_BUCKET_ID) {
+      throw new Error("Konfigurasi Backblaze B2 (Credentials & B2_BUCKET_ID) tidak lengkap di .env");
     }
-    this.client = new S3Client({
-      endpoint: `https://s3.${process.env.B2_REGION}.backblazeb2.com`,
-      region: process.env.B2_REGION,
-      credentials: {
-        accessKeyId: process.env.B2_KEY_ID,
-        secretAccessKey: process.env.B2_APP_KEY,
-      },
-    });
-    this.bucketName = process.env.B2_BUCKET_NAME;
+    this.bucketId = process.env.B2_BUCKET_ID!;
+    this.bucketName = process.env.B2_BUCKET_NAME!;
+  }
+
+  private async authorize(): Promise<void> {
+    if (this.authorizationToken) return;
+
+    try {
+      const B2_KEY_ID = process.env.B2_KEY_ID!;
+      const B2_APP_KEY = process.env.B2_APP_KEY!;
+      const credentials = Buffer.from(`${B2_KEY_ID}:${B2_APP_KEY}`).toString('base64');
+
+      const response = await axios.get('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+        headers: {
+          Authorization: `Basic ${credentials}`,
+        },
+      });
+
+      this.apiUrl = response.data.apiUrl;
+      this.authorizationToken = response.data.authorizationToken;
+      this.downloadUrl = response.data.downloadUrl;
+
+    } catch (error) {
+      console.error('B2 Authorization Error:', error);
+      throw new Error('Gagal melakukan otorisasi dengan Backblaze B2.');
+    }
   }
 
   async upload(file: Express.Multer.File): Promise<string> {
-    const fileStream = fs.createReadStream(file.path);
-    const key = `letters/${Date.now()}-${path.basename(file.originalname)}`;
-    
-    await this.client.send(new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      Body: fileStream,
-      ContentType: file.mimetype,
-    }));
-    
-    fs.unlinkSync(file.path);
-    return key;
-  }
+    await this.authorize();
 
-  async delete(fileIdentifier: string): Promise<void> {
-    await this.client.send(new DeleteObjectCommand({
-      Bucket: this.bucketName,
-      Key: fileIdentifier,
-    }));
-  }
+    const getUploadUrlResponse = await axios.post(
+      `${this.apiUrl}/b2api/v2/b2_get_upload_url`,
+      { bucketId: this.bucketId },
+      { headers: { Authorization: this.authorizationToken } }
+    );
 
-  async getAccessUrl(fileIdentifier: string): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: this.bucketName,
-      Key: fileIdentifier,
+    const { uploadUrl, authorizationToken: uploadAuthToken } = getUploadUrlResponse.data;
+
+    const fileData = fs.readFileSync(file.path);
+    const sha1 = crypto.createHash('sha1').update(fileData).digest('hex');
+    const fileName = `letters/${Date.now()}-${encodeURIComponent(path.basename(file.originalname))}`;
+
+    const uploadResponse = await axios.post(uploadUrl, fileData, {
+      headers: {
+        'Authorization': uploadAuthToken,
+        'X-Bz-File-Name': fileName,
+        'Content-Type': file.mimetype,
+        'Content-Length': file.size,
+        'X-Bz-Content-Sha1': sha1,
+      },
     });
-    return getSignedUrl(this.client, command, { expiresIn: 900 });
+
+    fs.unlinkSync(file.path);
+
+    const { fileId, fileName: returnedFileName } = uploadResponse.data;
+    return JSON.stringify({ fileId, fileName: returnedFileName });
+  }
+
+  async delete(fileIdentifier: string, fileName?: string): Promise<void> {
+    await this.authorize();
+
+    let fileIdToDelete: string | undefined;
+    let fileNameToDelete: string | undefined;
+
+    try {
+      const parsed = JSON.parse(fileIdentifier);
+      fileIdToDelete = parsed.fileId;
+      fileNameToDelete = parsed.fileName;
+    } catch (e) {
+      console.warn('Failed to parse fileIdentifier for B2 delete, assuming legacy fileName:', fileIdentifier);
+      fileIdToDelete = undefined;
+      fileNameToDelete = fileIdentifier;
+    }
+
+    if (!fileIdToDelete) {
+      console.warn('fileId missing for Backblaze B2 delete operation. Delete skipped for file:', fileNameToDelete);
+      return;
+    }
+
+    if (!fileNameToDelete) {
+      throw new Error('fileName missing for Backblaze B2 delete operation.');
+    }
+
+    try {
+      await axios.post(
+        `${this.apiUrl}/b2api/v2/b2_delete_file_version`,
+        {
+          fileId: fileIdToDelete,
+          fileName: fileNameToDelete,
+        },
+        {
+          headers: {
+            Authorization: this.authorizationToken,
+          },
+        }
+      );
+    } catch (error) {
+      if (error && typeof error === 'object' && 'response' in error) {
+        // @ts-ignore
+        console.error('B2 Delete Error:', error.response?.data);
+      } else {
+        console.error('B2 Delete Error:', error);
+      }
+      throw new Error('Gagal menghapus file di Backblaze B2.');
+    }
+  }
+
+  async getAccessUrl(fileName: string): Promise<string> {
+    await this.authorize();
+    
+    const response = await axios.post(
+        `${this.apiUrl}/b2api/v2/b2_get_download_authorization`,
+        {
+            bucketId: this.bucketId,
+            fileNamePrefix: fileName,
+            validDurationInSeconds: 3600
+        },
+        {
+            headers: { Authorization: this.authorizationToken }
+        }
+    );
+
+    const downloadAuthToken = response.data.authorizationToken;
+    const friendlyUrl = `${this.downloadUrl}/file/${this.bucketName}/${fileName}`;
+    
+    return `${friendlyUrl}?Authorization=${downloadAuthToken}`;
   }
 }
 
@@ -102,8 +193,9 @@ class StorageService {
       return this.getProvider(providerName).upload(file);
   }
   
-  delete(fileIdentifier: string, providerName: 'b2' | 'cloudinary'): Promise<void> {
-      return this.getProvider(providerName).delete(fileIdentifier);
+  delete(fileIdentifier: string, providerName: 'b2' | 'cloudinary', fileName?: string): Promise<void> {
+      // @ts-ignore
+      return this.getProvider(providerName).delete(fileIdentifier, fileName);
   }
 
   getAccessUrl(fileIdentifier: string, providerName: 'b2' | 'cloudinary'): Promise<string> {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { deleteLetter, getAllLetters, getLetterViewUrl  } from '@/services/letterService';
+import { deleteLetter, getAllLetters } from '@/services/letterService';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-
 interface Letter {
   _id: string;
   nomorSurat: string;
@@ -36,7 +35,6 @@ export default function ArsipPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewingId, setViewingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLetters();
@@ -45,7 +43,8 @@ export default function ArsipPage() {
   const fetchLetters = async () => {
     setIsLoading(true);
     try {
-      const response = await getAllLetters();
+      const subdomain = 'smaharapanbangsa';
+      const response = await getAllLetters(subdomain);
       setAllLetters(response.data);
       setFilteredLetters(response.data);
     } catch (err: unknown) {
@@ -69,23 +68,10 @@ export default function ArsipPage() {
 
   const handleDelete = async (id: string) => {
     try {
-        await deleteLetter(id);
+        await deleteLetter(id, 'smaharapanbangsa');
         setAllLetters(prev => prev.filter(letter => letter._id !== id));
     } catch (err) {
         console.error("Gagal menghapus surat:", err);
-    }
-  };
-
-  const handleViewLetter = async (id: string) => {
-    setViewingId(id);
-    try {
-      const response = await getLetterViewUrl(id);
-      window.open(response.url, '_blank');
-    } catch (err) {
-      console.error("Gagal mendapatkan URL surat:", err);
-      alert('Gagal membuka surat. Silakan coba lagi.');
-    } finally {
-      setViewingId(null);
     }
   };
 
@@ -124,21 +110,16 @@ export default function ArsipPage() {
                       <TableCell className="font-medium">{letter.judul}</TableCell>
                       <TableCell>{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</TableCell>
                       <TableCell className="text-right flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewLetter(letter._id)}
-                          disabled={viewingId === letter._id}
-                        >
-                          {viewingId === letter._id ? '...' : <Eye className="h-4 w-4" />}
-                        </Button>
-                        
+                        <Link href={`/dashboard/arsip/${letter._id}/view`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Link href={`/dashboard/arsip/${letter._id}/edit`}>
                           <Button variant="outline" size="sm">
                             <FilePenLine className="h-4 w-4" />
                           </Button>
                         </Link>
-
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm">

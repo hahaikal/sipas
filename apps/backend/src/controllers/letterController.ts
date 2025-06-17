@@ -97,7 +97,8 @@ export const getLetterById = async (req: AuthenticatedRequest, res: Response, ne
 
 export const updateLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const letter = await Letter.findById(req.params.id);
+        const schoolId = await getSchoolIdFromSubdomain(req);
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: schoolId });
 
         if (!letter) {
             res.status(404);
@@ -212,6 +213,47 @@ export const createLetterFromBot = async (req: Request, res: Response, next: Nex
     } catch (delErr) {
       console.error("Gagal menghapus file bot setelah error:", req.file.filename, delErr);
     }
+    next(error);
+  }
+};
+
+export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const subdomain = req.body.subdomain;
+    if (!subdomain) {
+      res.status(400);
+      throw new Error('Subdomain tidak ditemukan di request body');
+    }
+
+    const school = await School.findOne({ subdomain: subdomain, status: 'active' });
+    if (!school) {
+      res.status(404);
+      throw new Error(`Sekolah dengan subdomain "${subdomain}" tidak ditemukan atau tidak aktif`);
+    }
+    
+    const letter = await Letter.findOne({ _id: req.params.id, schoolId: school._id });
+    if (!letter) {
+      res.status(404);
+      throw new Error('Surat tidak ditemukan');
+    }
+
+    // Use storageService to get the download URL from Backblaze B2
+    const fileIdentifier = letter.fileUrl;
+    let fileId = '';
+    let fileName = '';
+    try {
+      const parsed = JSON.parse(fileIdentifier);
+      fileId = parsed.fileId;
+      fileName = parsed.fileName;
+    } catch (e) {
+      console.error('Failed to parse fileIdentifier in getLetterViewUrl:', fileIdentifier);
+      throw new Error('Invalid file identifier format.');
+    }
+
+    const downloadUrl = await storageService.getAccessUrl(fileName, 'b2');
+
+    res.status(200).json({ url: downloadUrl });
+  } catch (error) {
     next(error);
   }
 };

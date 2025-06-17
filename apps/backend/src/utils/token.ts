@@ -7,7 +7,7 @@ export const generateToken = (user: IUserDocument): string => {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
 
-  return jwt.sign({ id: user._id, role: user.role }, secret, {
+  return jwt.sign({ id: user._id, role: user.role, schoolId: user.schoolId }, secret, {
     expiresIn: '1d',
   });
 };

@@ -22,9 +22,11 @@ router.route('/list')
 
 router.route('/:id')
   .all(protect)
-  .get(letterController.getLetterById)
+  .post(letterController.getLetterById)
   .put(letterController.updateLetter)
   .delete(letterController.deleteLetter);
+
+router.post('/:id/view', protect, letterController.getLetterViewUrl);
 
 router.get('/by-nomor/:nomor', protect, letterController.getLetterByNumber);
 

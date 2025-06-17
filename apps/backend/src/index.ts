@@ -14,6 +14,14 @@ import galleryRoutes from './routes/galleryRoutes';
 import achievementRoutes from './routes/achievementRoutes';
 import { redisClient, connectRedis } from './config/redisClient';
 
+import './models/User';
+import './models/Letter';
+import './models/News';
+import './models/Gallery';
+import './models/Achievement';
+import './models/Otp';
+import './models/School';
+
 const app = express();
 const PORT = process.env.PORT;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/sipas';

@@ -45,22 +45,22 @@ export const createLetter = async (data: CreateLetterData & { subdomain: string 
   return response.data;
 };
 
-export const deleteLetter = async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete(`/letters/${id}`);
+export const deleteLetter = async (id: string, subdomain: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/letters/${id}`, { data: { subdomain } });
     return response.data;
 };
 
-export const getLetterById = async (id: string): Promise<{ data: Letter }> => {
-    const response = await api.get<{ data: Letter }>(`/letters/${id}`);
+export const getLetterById = async (id: string, subdomain: string): Promise<{ data: Letter }> => {
+    const response = await api.post<{ data: Letter }>(`/letters/${id}`, { subdomain });
     return response.data;
 };
 
-export const updateLetter = async (id: string, data: UpdateLetterData): Promise<Letter> => {
-    const response = await api.put<Letter>(`/letters/${id}`, data);
+export const updateLetter = async (id: string, data: UpdateLetterData, subdomain: string): Promise<Letter> => {
+    const response = await api.put<Letter>(`/letters/${id}`, { ...data, subdomain });
     return response.data;
 };
 
-export const getLetterViewUrl = async (id: string): Promise<{ url: string }> => {
-    const response = await api.get<{ url: string }>(`/letters/${id}/view`);
+export const getLetterViewUrl = async (id: string, subdomain: string): Promise<{ url: string }> => {
+    const response = await api.post<{ url: string }>(`/letters/${id}/view`, { subdomain });
     return response.data;
 };
