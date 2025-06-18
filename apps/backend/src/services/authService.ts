@@ -25,8 +25,8 @@ export const verifyOtpAndCreateUser = async (email: string, otp: string, userDat
     throw new Error('OTP salah atau sudah kedaluwarsa.');
   }
 
-  const { name, phone, password, role } = userData;
-  const newUser = new User({ name, email, phone, password, role });
+  const { name, phone, password, role, schoolId } = userData;
+  const newUser = new User({ name, email, phone, password, role, schoolId });
   await newUser.save();
 
   await Otp.deleteOne({ _id: otpDoc._id });

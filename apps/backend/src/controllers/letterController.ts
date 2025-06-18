@@ -2,22 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import Letter from '../models/Letter';
 import User from '../models/User';
 import School from '../models/School';
-import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { AuthenticatedRequest, getSchoolIdFromSubdomain } from '../middleware/authMiddleware';
 import { convertToDate } from '../utils/formatters';
 import { storageService } from '../services/storageService';
-
-async function getSchoolIdFromSubdomain(req: AuthenticatedRequest) {
-  const subdomain = req.body.subdomain;
-  if (!subdomain) {
-    throw new Error('Subdomain tidak ditemukan di request body');
-  }
-
-  const school = await School.findOne({ subdomain: subdomain, status: 'active' });
-  if (!school) {
-    throw new Error(`Sekolah dengan subdomain "${subdomain}" tidak ditemukan atau tidak aktif`);
-  }
-  return school._id;
-}
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.file) {

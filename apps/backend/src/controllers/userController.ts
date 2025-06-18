@@ -2,20 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
-export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllUsers = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const users = await User.find({}).select('-password');
+        const users = await User.find({ schoolId: req.user?.schoolId }).select('-password');
         res.status(200).json({ data: users });
     } catch (error) {
         next(error);
     }
 };
 
-export const createUser = async (req: Request, res: Response, next: NextFunction) => {
+export const createUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { name, email, phone, password, role } = req.body;
+        const { name, email, phone, password, role, schoolId } = req.body;
 
-        const userExists = await User.findOne({ $or: [{ email }, { phone }] });
+        const userExists = await User.findOne({ $or: [{ email }, { phone }], schoolId: schoolId || req.user?.schoolId });
         if (userExists) {
             res.status(400);
             throw new Error('Email atau nomor telepon sudah terdaftar');
@@ -27,6 +27,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
             phone,
             password,
             role,
+            schoolId: schoolId || req.user?.schoolId,
         });
 
         if (user) {
@@ -36,6 +37,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
                 email: user.email,
                 phone: user.phone,
                 role: user.role,
+                schoolId: user.schoolId,
             };
             res.status(201).json({ message: 'Pengguna berhasil dibuat.', data: userResponse });
         } else {
@@ -51,7 +53,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response, next:
     try {
         const { name, email, phone, role } = req.body;
 
-        const user = await User.findById(req.params.id);
+        const user = await User.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
         if (!user) {
             res.status(404);
@@ -75,7 +77,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response, next:
 
 export const deleteUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
         if (!user) {
             res.status(404);
@@ -94,7 +96,7 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response, next:
     }
 };
 
-export const getUserByPhone = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserByPhone = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         let phone = req.params.phone;
 
@@ -104,7 +106,7 @@ export const getUserByPhone = async (req: Request, res: Response, next: NextFunc
             phone = '0' + phone.slice(2);
         }
 
-        const user = await User.findOne({ phone: phone }).select('-password');
+        const user = await User.findOne({ phone: phone, schoolId: req.user?.schoolId }).select('-password');
 
         if (!user) {
             res.status(404);

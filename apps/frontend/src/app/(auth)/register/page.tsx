@@ -1,52 +1,69 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef, ChangeEvent, KeyboardEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { register, verifyOtp } from "@/services/authService";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const registerSchema = z.object({
+  name: z.string().min(3, { message: "Nama lengkap minimal 3 karakter." }),
+  email: z.string().email({ message: "Format email tidak valid." }),
+  phone: z.string().min(10, { message: "Nomor telepon minimal 10 digit." }),
+  password: z.string().min(6, { message: "Password minimal 6 karakter." }),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Konfirmasi password tidak cocok.",
+  path: ["confirmPassword"],
+});
 
 export default function RegisterPage() {
   const [step, setStep] = useState<'register' | 'verify'>('register');
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    role: 'admin',
-  });
-  const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState(''); 
+
+  const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
+  const form = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", email: "", phone: "", password: "", confirmPassword: "" },
+  });
 
-  const handleRegisterSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  interface ErrorResponse {
+    response?: {
+      data?: {
+        message?: string;
+      };
+    };
+  }
+
+  const handleRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
     setIsLoading(true);
     setError(null);
-    setSuccessMessage(null);
-
     try {
-      const data = await register(formData);
+      const data = await register({ ...values, role: 'guru', subdomain: "smaharapanbangsa" });
       setSuccessMessage(data.message);
+      setUserEmail(values.email);
       setStep('verify');
     } catch (err: unknown) {
-      let errorMessage = 'Gagal mendaftar. Silakan coba lagi.';
-      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
-        errorMessage = (err.response as { data?: { message?: string } }).data?.message || errorMessage;
+      if (typeof err === "object" && err !== null && "response" in err && typeof (err as ErrorResponse).response === "object") {
+        setError((err as ErrorResponse).response?.data?.message || 'Gagal mendaftar. Silakan coba lagi.');
+      } else {
+        setError('Gagal mendaftar. Silakan coba lagi.');
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -56,101 +73,113 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setSuccessMessage(null);
-
+    const finalOtp = otp.join("");
+    if (finalOtp.length !== 6) {
+        setError("Kode OTP harus 6 digit.");
+        setIsLoading(false);
+        return;
+    }
+    
     try {
-      const data = await verifyOtp(formData.email, otp);
+      const data = await verifyOtp(userEmail, finalOtp);
       setSuccessMessage(data.message + " Mengarahkan ke halaman login...");
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+      setTimeout(() => router.push('/login'), 2000);
     } catch (err: unknown) {
-      let errorMessage = 'Gagal verifikasi OTP. Silakan coba lagi.';
-      if (
-        err &&
-        typeof err === 'object' &&
-        'response' in err &&
-        err.response &&
-        typeof err.response === 'object' &&
-        'data' in err.response &&
-        err.response.data &&
-        typeof err.response.data === 'object' &&
-        'message' in err.response.data
-      ) {
-        errorMessage = (err.response as { data?: { message?: string } }).data?.message || errorMessage;
+      
+      if (typeof err === "object" && err !== null && "response" in err && typeof (err as ErrorResponse).response === "object") {
+        setError((err as ErrorResponse).response?.data?.message || 'Gagal verifikasi OTP.');
+      } else {
+        setError('Gagal verifikasi OTP.');
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-      {step === 'register' && (
-        <form onSubmit={handleRegisterSubmit}>
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl">Daftar Akun SIPAS</CardTitle>
-              <CardDescription>Buat akun baru untuk sekolah Anda</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-              <div className="grid gap-2">
-                <Label htmlFor="name">Nama Lengkap</Label>
-                <Input id="name" value={formData.name} onChange={handleInputChange} required disabled={isLoading} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={isLoading} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Nomor Telepon</Label>
-                <Input id="phone" value={formData.phone} onChange={handleInputChange} required disabled={isLoading} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={formData.password} onChange={handleInputChange} required disabled={isLoading} />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? 'Memproses...' : 'Daftar & Kirim OTP'}
-              </Button>
-               <p className="mt-4 text-xs text-center text-gray-700">
-                Sudah punya akun?{" "}
-                <Link href="/login" className=" text-blue-600 hover:underline">
-                  Login
-                </Link>
-              </p>
-            </CardFooter>
-          </Card>
-        </form>
-      )}
+  const handleOtpChange = (e: ChangeEvent<HTMLInputElement>, index: number) => {
+    const { value } = e.target;
+    if (/[^0-9]/.test(value)) return;
 
-      {step === 'verify' && (
-         <form onSubmit={handleOtpSubmit}>
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl">Verifikasi OTP</CardTitle>
-              <CardDescription>Masukkan kode 6 digit yang dikirim ke email <strong>{formData.email}</strong></CardDescription>
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Card className="w-full max-w-md shadow-lg">
+        {step === 'register' && (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold">Buat Akun Baru</CardTitle>
+              <CardDescription>Isi data di bawah untuk memulai</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
-              {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-              {successMessage && <Alert><AlertTitle>Info</AlertTitle><AlertDescription>{successMessage}</AlertDescription></Alert>}
-               <div className="grid gap-2">
-                <Label htmlFor="otp">Kode OTP</Label>
-                <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value)} required disabled={isLoading} maxLength={6} />
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleRegisterSubmit)}>
+                <CardContent className="grid gap-3">
+                  {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+                  <FormField name="name" control={form.control} render={({ field }) => (<FormItem><FormLabel>Nama Lengkap</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField name="email" control={form.control} render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="nama@sekolah.sch.id" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField name="phone" control={form.control} render={({ field }) => (<FormItem><FormLabel>Nomor Telepon</FormLabel><FormControl><Input placeholder="08123456789" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField name="password" control={form.control} render={({ field }) => (<FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField name="confirmPassword" control={form.control} render={({ field }) => (<FormItem><FormLabel>Konfirmasi Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </CardContent>
+                <CardFooter className="flex flex-col gap-4">
+                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Memproses...' : 'Lanjutkan'}</Button>
+                  <p className="text-sm">Sudah punya akun? <Link href="/login" className="font-semibold text-primary hover:underline">Login di sini</Link></p>
+                </CardFooter>
+              </form>
+            </Form>
+          </>
+        )}
+
+        {step === 'verify' && (
+          <form onSubmit={handleOtpSubmit}>
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold">Verifikasi Akun Anda</CardTitle>
+              <CardDescription>Masukkan 6 digit kode OTP yang dikirimkan ke email <strong>{userEmail}</strong></CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+               {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+               {successMessage && !error && <Alert><AlertDescription>{successMessage}</AlertDescription></Alert>}
+              <div className="flex justify-center gap-2">
+                {otp.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={(el) => { inputRefs.current[index] = el; }}
+                    type="text"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(e, index)}
+                    onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                    className="h-12 w-10 text-center text-lg font-semibold"
+                    disabled={isLoading}
+                  />
+                ))}
               </div>
             </CardContent>
-            <CardFooter>
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? 'Memverifikasi...' : 'Verifikasi & Selesaikan Pendaftaran'}
-              </Button>
+            <CardFooter className="flex flex-col gap-4">
+                <Button className="w-full" type="submit" disabled={isLoading}>
+                    {isLoading ? 'Memverifikasi...' : 'Verifikasi & Selesaikan Pendaftaran'}
+                </Button>
+                <button type="button" className="text-sm text-primary hover:underline" onClick={() => alert('Fungsi kirim ulang OTP belum diimplementasikan.')}>
+                    Kirim ulang kode
+                </button>
             </CardFooter>
-          </Card>
-        </form>
-      )}
+          </form>
+        )}
+      </Card>
     </div>
   );
 }

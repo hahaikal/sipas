@@ -1,11 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/authService';
 import { redisClient } from '../config/redisClient';
+import School from '../models/School';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, name, phone, password, role } = req.body;
-    const userData = { name, phone, password, role };
+    const { email, name, phone, password, role, subdomain } = req.body;
+    const school = await School.findOne({ subdomain: subdomain });
+    if (!school) {
+      throw new Error(`Sekolah dengan subdomain "${subdomain}" tidak terdaftar.`);
+    }
+    const userData = { name, phone, password, role, schoolId: school._id };
+
     const redisKey = `registration:${email}`;
 
     await redisClient.set(redisKey, JSON.stringify(userData), { EX: 300 });

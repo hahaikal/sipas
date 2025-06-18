@@ -12,6 +12,7 @@ interface RegisterData {
     phone: string;
     password: string;
     role: string;
+    subdomain: string;
 }
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
