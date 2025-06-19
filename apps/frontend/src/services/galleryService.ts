@@ -31,3 +31,10 @@ export const deleteGalleryItem = async (id: string): Promise<{ message: string }
     const response = await api.delete(`/gallery/${id}`, { data: { subdomain } });
     return response.data;
 };
+
+export const getPublicGalleryItems = async (subdomain: string): Promise<{ data: GalleryItem[] }> => {
+    const response = await api.get('/public/gallery', {
+        params: { subdomain }
+    });
+    return response.data;
+};

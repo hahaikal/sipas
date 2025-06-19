@@ -3,15 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { NewsSection } from '@/components/landing/NewsSection';
+import { AchievementsSection } from '@/components/landing/AchievementsSection';
+import { GallerySection } from '@/components/landing/GallerySection';
 import { 
   BookOpen, 
   Building, 
-  Users, 
-  Trophy, 
+  Users,
   MapPin, 
   Phone, 
   Mail,
-  ChevronRight,
   Target,
   Heart,
   Globe,
@@ -20,10 +21,22 @@ import {
   LogIn
 } from 'lucide-react';
 
+import { getPublicNews } from '@/services/newsService';
+import { getPublicGalleryItems, GalleryItem } from '@/services/galleryService';
+import { getPublicAchievements, Achievement } from '@/services/achievementService';
+import { getSubdomain } from '@/lib/subdomain';
+import { INews } from '@sipas/types/news';
+
 export default function DashboardPage() {
+  const [news, setNews] = useState<INews[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState<Record<string, boolean>>({});
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const heroSlides = [
     {
@@ -76,98 +89,51 @@ export default function DashboardPage() {
     }
   ];
 
-  const galleryItems = [
-    {
-      id: 1,
-      image: "https://images.pexels.com/photos/8471709/pexels-photo-8471709.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Kegiatan Pembelajaran",
-      category: "Akademik"
-    },
-    {
-      id: 2,
-      image: "https://images.pexels.com/photos/8471710/pexels-photo-8471710.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Olahraga & Kesehatan",
-      category: "Ekstrakurikuler"
-    },
-    {
-      id: 3,
-      image: "https://images.pexels.com/photos/8471711/pexels-photo-8471711.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Seni & Budaya",
-      category: "Kreativitas"
-    },
-    {
-      id: 4,
-      image: "https://images.pexels.com/photos/8471712/pexels-photo-8471712.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Praktikum Sains",
-      category: "Laboratorium"
-    },
-    {
-      id: 5,
-      image: "https://images.pexels.com/photos/8471713/pexels-photo-8471713.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Kegiatan Sosial",
-      category: "Karakter"
-    },
-    {
-      id: 6,
-      image: "https://images.pexels.com/photos/8471714/pexels-photo-8471714.jpeg?auto=compress&cs=tinysrgb&w=600",
-      title: "Teknologi Digital",
-      category: "Inovasi"
-    }
-  ];
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+      
+      const subdomain = getSubdomain();
+      if (!subdomain) {
+        setError("Subdomain sekolah tidak dapat ditemukan.");
+        setIsLoading(false);
+        return;
+      }
 
-  const news = [
-    {
-      id: 1,
-      image: "https://images.pexels.com/photos/8471715/pexels-photo-8471715.jpeg?auto=compress&cs=tinysrgb&w=400",
-      title: "Pembukaan Pendaftaran Siswa Baru 2024/2025",
-      excerpt: "Pendaftaran siswa baru telah dibuka dengan berbagai program unggulan dan fasilitas terbaru.",
-      date: "15 Januari 2024",
-      category: "Pengumuman"
-    },
-    {
-      id: 2,
-      image: "https://images.pexels.com/photos/8471716/pexels-photo-8471716.jpeg?auto=compress&cs=tinysrgb&w=400",
-      title: "Prestasi Gemilang di Olimpiade Sains Nasional",
-      excerpt: "Siswa-siswi meraih medali emas dan perak dalam kompetisi sains tingkat nasional.",
-      date: "10 Januari 2024",
-      category: "Prestasi"
-    },
-    {
-      id: 3,
-      image: "https://images.pexels.com/photos/8471717/pexels-photo-8471717.jpeg?auto=compress&cs=tinysrgb&w=400",
-      title: "Launching Program Kelas Digital",
-      excerpt: "Inovasi pembelajaran dengan teknologi terdepan untuk mempersiapkan generasi digital.",
-      date: "5 Januari 2024",
-      category: "Inovasi"
-    }
-  ];
+      try {
+        const [newsRes, galleryRes, achievementsRes] = await Promise.all([
+          getPublicNews(subdomain),
+          getPublicGalleryItems(subdomain),
+          getPublicAchievements(subdomain)
+        ]);
 
-  const achievements = [
-    {
-      year: "2024",
-      title: "Juara 1 Olimpiade Matematika Nasional",
-      level: "Nasional",
-      achievedBy: "Tim Matematika"
-    },
-    {
-      year: "2023",
-      title: "Sekolah Adiwiyata Tingkat Provinsi",
-      level: "Provinsi",
-      achievedBy: "Sekolah"
-    },
-    {
-      year: "2023",
-      title: "Juara 2 Lomba Karya Tulis Ilmiah",
-      level: "Regional",
-      achievedBy: "Tim Peneliti Muda"
-    },
-    {
-      year: "2022",
-      title: "Akreditasi A dari BAN-S/M",
-      level: "Nasional",
-      achievedBy: "Sekolah"
+        setNews(newsRes.data || []);
+        setGallery(galleryRes.data || []);
+        setAchievements(achievementsRes.data || []);
+
+      } catch (err: unknown) {
+        console.error("Gagal mengambil data untuk landing page:", err);
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          "response" in err &&
+          typeof (err as { response?: { data?: { message?: string } } }).response === "object"
+        ) {
+          setError(
+            ((err as { response?: { data?: { message?: string } } }).response?.data?.message) ||
+              "Gagal memuat data sekolah. Silakan coba lagi."
+          );
+        } else {
+          setError("Gagal memuat data sekolah. Silakan coba lagi.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
-  ];
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -269,6 +235,13 @@ export default function DashboardPage() {
         </div>
       </nav>
 
+      {error && (
+        <div className="container mx-auto py-10 text-center text-destructive bg-destructive/10 rounded-lg my-4">
+          <p className="font-semibold">Terjadi Kesalahan</p>
+          <p>{error}</p>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section id="home" className="relative h-screen overflow-hidden">
         <div className="absolute inset-0">
@@ -356,143 +329,23 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Gallery Section */}
-      <section id="gallery" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
-              Momen Tak Terlupakan
-            </h2>
-            <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
-              Dokumentasi kegiatan dan pencapaian siswa-siswi kami
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {galleryItems.map((item, index) => (
-              <div
-                key={item.id}
-                className={`group relative overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 ${
-                  isVisible.gallery ? 'animate-fade-in-up' : 'opacity-0'
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="relative w-full h-64 sm:h-72 lg:h-80">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <span className="text-sm bg-primary px-2 py-1 rounded font-[var(--font-inter)]">{item.category}</span>
-                    <h3 className="text-lg font-semibold mt-2 font-[var(--font-poppins)]">{item.title}</h3>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {isLoading ? (
+        <div className="text-center py-20">Memuat data galeri...</div>
+      ) : (
+        <GallerySection items={gallery} />
+      )}
+      
+      {isLoading ? (
+        <div className="text-center py-20">Memuat data berita...</div>
+      ) : (
+        <NewsSection news={news} />
+      )}
 
-      {/* News Section */}
-      <section id="news" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
-              Berita Terbaru dari Sekolah Kami
-            </h2>
-            <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
-              Informasi terkini tentang kegiatan dan pencapaian sekolah
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {news.map((article, index) => (
-              <article
-                key={article.id}
-                className={`bg-card rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border ${
-                  isVisible.news ? 'animate-fade-in-up' : 'opacity-0'
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="relative h-48">
-                  <Image
-                    src={article.image}
-                    alt={article.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded font-[var(--font-inter)]">
-                      {article.category}
-                    </span>
-                    <span className="text-sm text-muted-foreground font-[var(--font-inter)]">{article.date}</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-card-foreground mb-3 line-clamp-2 font-[var(--font-poppins)]">
-                    {article.title}
-                  </h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-3 font-[var(--font-inter)]">{article.excerpt}</p>
-                  <button className="text-primary hover:text-primary/80 font-semibold flex items-center group font-[var(--font-inter)]">
-                    Baca Selengkapnya
-                    <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Achievements Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
-              Dinding Prestasi
-            </h2>
-            <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
-              Pencapaian membanggakan yang telah diraih sekolah kami
-            </p>
-          </div>
-          
-          <div className="relative">
-            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-border"></div>
-            
-            {achievements.map((achievement, index) => (
-              <div
-                key={index}
-                className={`relative flex items-center mb-12 ${
-                  index % 2 === 0 ? 'justify-start' : 'justify-end'
-                }`}
-              >
-                <div className={`w-5/12 ${index % 2 === 0 ? 'pr-8' : 'pl-8'}`}>
-                  <div className="bg-card p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border">
-                    <div className="flex items-center mb-3">
-                      <Trophy className="w-6 h-6 text-yellow-500 mr-2" />
-                      <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded font-[var(--font-inter)]">
-                        {achievement.level}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-card-foreground mb-2 font-[var(--font-poppins)]">
-                      {achievement.title}
-                    </h3>
-                    <p className="text-muted-foreground mb-2 font-[var(--font-inter)]">Diraih oleh: {achievement.achievedBy}</p>
-                    <p className="text-primary font-semibold font-[var(--font-inter)]">{achievement.year}</p>
-                  </div>
-                </div>
-                
-                <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-card shadow-lg"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {isLoading ? (
+        <div className="text-center py-20">Memuat data prestasi...</div>
+      ) : (
+        <AchievementsSection achievements={achievements} />
+      )}
 
       {/* Contact Section */}
       <section id="contact" className="py-20 bg-muted/30">

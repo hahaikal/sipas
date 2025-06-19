@@ -32,7 +32,7 @@ export default function EditNewsPage() {
         setIsLoading(true);
         try {
             await updateNews(id, data);
-            router.push('/dashboard/berita');
+            router.push('/dashboard/news');
         } catch (error) {
             console.error('Failed to update news', error);
             alert('Gagal memperbarui berita.');

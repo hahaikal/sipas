@@ -30,3 +30,10 @@ export const deleteNews = async (id: string) => {
     const response = await api.delete(`/news/${id}`, { data: { subdomain } });
     return response.data;
 };
+
+export const getPublicNews = async (subdomain: string) => {
+    const response = await api.get('/public/news', {
+        params: { subdomain }
+    });
+    return response.data;
+};

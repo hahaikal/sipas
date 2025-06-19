@@ -10,37 +10,29 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-
-const formSchema = z.object({
+const formSchema = (isEditing: boolean) => z.object({
   name: z.string().min(3, { message: "Nama minimal 3 karakter." }),
   email: z.string().email({ message: "Format email tidak valid." }),
   phone: z.string().min(10, { message: "Nomor telepon minimal 10 digit." }),
-  password: z.string().optional(),
+  password: isEditing
+    ? z.string().optional()
+    : z.string().min(6, { message: "Password wajib diisi, minimal 6 karakter." }),
   role: z.enum(['admin', 'guru', 'kepala sekolah']),
-}).refine(data => {
-  if (!data.password) {
-      const context = z.getParsedType(data);
-      if (context === 'object' && !('initialData' in data)) {
-        return false;
-      }
-  }
-  return true;
-}, {
-    message: "Password wajib diisi untuk pengguna baru.",
-    path: ["password"],
 });
 
 
 interface UserFormProps {
-  onSubmit: (data: z.infer<typeof formSchema>) => void;
+  onSubmit: (data: z.infer<ReturnType<typeof formSchema>>) => void;
   initialData?: User | null;
   onClose: () => void;
   isLoading?: boolean;
 }
 
 export default function UserForm({ onSubmit, initialData, onClose, isLoading = false }: UserFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const isEditing = !!initialData;
+
+  const form = useForm<z.infer<ReturnType<typeof formSchema>>>({
+    resolver: zodResolver(formSchema(isEditing)),
     defaultValues: {
       name: initialData?.name || '',
       email: initialData?.email || '',
@@ -50,11 +42,14 @@ export default function UserForm({ onSubmit, initialData, onClose, isLoading = f
     },
   });
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    if (initialData && !values.password) {
-      delete values.password;
+  const handleSubmit = (values: z.infer<ReturnType<typeof formSchema>>) => {
+    const dataToSubmit = { ...values };
+    
+    if (isEditing && !dataToSubmit.password) {
+      delete (dataToSubmit as Partial<typeof dataToSubmit>).password;
     }
-    onSubmit(values);
+    
+    onSubmit(dataToSubmit);
   };
   
   return (
@@ -91,7 +86,19 @@ export default function UserForm({ onSubmit, initialData, onClose, isLoading = f
             control={form.control}
             name="password"
             render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4"><FormLabel className="text-right">Password</FormLabel><FormControl><Input {...field} type="password" placeholder={initialData ? "Kosongkan jika tidak diubah" : ""} className="col-span-3" disabled={isLoading} /></FormControl><FormMessage className="col-span-4 text-right" /></FormItem>
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Password</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="password" 
+                      placeholder={isEditing ? "Kosongkan jika tidak diubah" : ""} 
+                      className="col-span-3" 
+                      disabled={isLoading} 
+                    />
+                  </FormControl>
+                  <FormMessage className="col-span-4 text-right" />
+                </FormItem>
             )}
         />
         <FormField

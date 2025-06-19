@@ -107,7 +107,6 @@ export default function ManageGalleryPage() {
                                             alt={item.caption}
                                             width={300}
                                             height={300}
-                                            unoptimized
                                             className="object-cover"
                                         />
                                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex flex-col justify-between p-2">

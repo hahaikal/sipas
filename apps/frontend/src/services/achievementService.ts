@@ -30,3 +30,10 @@ export const deleteAchievement = async (id: string): Promise<{ message: string }
     const response = await api.delete(`/achievements/${id}`, { data: { subdomain } });
     return response.data;
 };
+
+export const getPublicAchievements = async (subdomain: string): Promise<{ data: Achievement[] }> => {
+    const response = await api.get('/public/achievements', {
+        params: { subdomain }
+    });
+    return response.data;
+};
