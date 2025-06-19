@@ -175,7 +175,7 @@ export default function DashboardPage() {
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground font-[var(--font-poppins)]">SMA Unggulan</span>
+              <span className="text-xl text-foreground font-[var(--font-poppins)]">SMA Unggulan</span>
             </div>
             
             {/* Desktop Navigation */}
@@ -192,12 +192,12 @@ export default function DashboardPage() {
               <Link
                 key={'/Login'}
                 href={'/login'}
-                className='flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)] font-medium'
+                className='flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]'
               >
                 <LogIn className="w-4 h-4" />
                 <span>Login Sekolah</span>
               </Link>
-              <button className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors font-[var(--font-inter)] font-medium">
+              <button className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors font-medium">
                 Daftar Sekarang
               </button>
             </div>
@@ -221,11 +221,11 @@ export default function DashboardPage() {
                 <a href="#news" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]" onClick={toggleMobileMenu}>Berita</a>
                 <a href="#contact" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]" onClick={toggleMobileMenu}>Kontak</a>
                 <div className="flex flex-col space-y-3 pt-4 border-t border-border">
-                  <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)] font-medium justify-start">
+                  <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors font-medium justify-start">
                     <LogIn className="w-4 h-4" />
                     <span>Login Sekolah</span>
                   </button>
-                  <button className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors font-[var(--font-inter)] font-medium text-left">
+                  <button className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors font-[var(--font-inter)] text-left">
                     Daftar Sekarang
                   </button>
                 </div>
@@ -266,17 +266,17 @@ export default function DashboardPage() {
         
         <div className="relative z-10 h-full flex items-center justify-center text-center text-white">
           <div className="max-w-4xl mx-auto px-4">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in-up font-[var(--font-poppins)]">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in-up">
               {heroSlides[currentSlide].title}
             </h1>
             <p className="text-xl md:text-2xl mb-8 animate-fade-in-up animation-delay-200 font-[var(--font-inter)]">
               {heroSlides[currentSlide].subtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animation-delay-400">
-              <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-[var(--font-inter)]">
+              <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
                 Daftar PPDB Online
               </button>
-              <button className="border-2 border-white text-white hover:bg-white hover:text-foreground px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 font-[var(--font-inter)]">
+              <button className="border-2 border-white text-white hover:bg-white hover:text-foreground px-8 py-4 rounded-lg text-lg transition-all duration-300 font-[var(--font-inter)]">
                 Pelajari Lebih Lanjut
               </button>
             </div>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
       <section id="about" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Mengapa Memilih Kami?
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto font-[var(--font-inter)]">
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                 <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <feature.icon className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-card-foreground mb-4 font-[var(--font-poppins)]">{feature.title}</h3>
+                <h3 className="text-xl font-bold text-card-foreground mb-4">{feature.title}</h3>
                 <p className="text-muted-foreground leading-relaxed font-[var(--font-inter)]">{feature.description}</p>
               </div>
             ))}
@@ -351,7 +351,7 @@ export default function DashboardPage() {
       <section id="contact" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Hubungi Kami
             </h2>
             <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                   <MapPin className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2 font-[var(--font-poppins)]">Alamat</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Alamat</h3>
                   <p className="text-muted-foreground font-[var(--font-inter)]">
                     Jl. Pendidikan No. 123<br />
                     Kota Pendidikan, Provinsi 12345<br />
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                   <Phone className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2 font-[var(--font-poppins)]">Telepon</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Telepon</h3>
                   <p className="text-muted-foreground font-[var(--font-inter)]">
                     (021) 1234-5678<br />
                     (021) 8765-4321
@@ -393,7 +393,7 @@ export default function DashboardPage() {
                   <Mail className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2 font-[var(--font-poppins)]">Email</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Email</h3>
                   <p className="text-muted-foreground font-[var(--font-inter)]">
                     info@smaunggulan.sch.id<br />
                     ppdb@smaunggulan.sch.id
@@ -403,10 +403,10 @@ export default function DashboardPage() {
             </div>
             
             <div className="bg-card p-8 rounded-xl shadow-lg border">
-              <h3 className="text-2xl font-bold text-card-foreground mb-6 font-[var(--font-poppins)]">Kirim Pesan</h3>
+              <h3 className="text-2xl font-bold text-card-foreground mb-6">Kirim Pesan</h3>
               <form className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-card-foreground mb-2 font-[var(--font-inter)]">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Nama Lengkap
                   </label>
                   <input
@@ -416,7 +416,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-card-foreground mb-2 font-[var(--font-inter)]">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Email
                   </label>
                   <input
@@ -426,7 +426,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-card-foreground mb-2 font-[var(--font-inter)]">
+                  <label className="block text-sm font-medium text-card-foreground mb-2">
                     Pesan
                   </label>
                   <textarea
@@ -437,7 +437,7 @@ export default function DashboardPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-semibold transition-colors font-[var(--font-inter)]"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg transition-colors font-[var(--font-inter)]"
                 >
                   Kirim Pesan
                 </button>
@@ -456,7 +456,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold text-card-foreground font-[var(--font-poppins)]">SMA Unggulan</span>
+                <span className="text-xl font-bold text-card-foreground">SMA Unggulan</span>
               </div>
               <p className="text-muted-foreground leading-relaxed font-[var(--font-inter)]">
                 Membentuk generasi unggul, berkarakter, dan kreatif untuk masa depan yang cerah.
@@ -464,7 +464,7 @@ export default function DashboardPage() {
             </div>
             
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-card-foreground font-[var(--font-poppins)]">Menu</h3>
+              <h3 className="text-lg font-semibold mb-4 text-card-foreground">Menu</h3>
               <ul className="space-y-2">
                 <li><a href="#home" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]">Beranda</a></li>
                 <li><a href="#about" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]">Tentang</a></li>
@@ -474,7 +474,7 @@ export default function DashboardPage() {
             </div>
             
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-card-foreground font-[var(--font-poppins)]">Program</h3>
+              <h3 className="text-lg font-semibold mb-4 text-card-foreground">Program</h3>
               <ul className="space-y-2">
                 <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]">PPDB Online</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors font-[var(--font-inter)]">Program Unggulan</a></li>
@@ -484,7 +484,7 @@ export default function DashboardPage() {
             </div>
             
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-card-foreground font-[var(--font-poppins)]">Kontak</h3>
+              <h3 className="text-lg font-semibold mb-4 text-card-foreground">Kontak</h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground font-[var(--font-inter)]">Jl. Pendidikan No. 123</p>
                 <p className="text-muted-foreground font-[var(--font-inter)]">(021) 1234-5678</p>

@@ -98,16 +98,17 @@ export default function ManageGalleryPage() {
                     {isLoading ? <p>Memuat...</p> : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {galleryItems.map(item => {
-                                const imageSrc = `${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '').replace(/\/$/, '')}${item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl}`;
+                                const imageSrc = item.imageUrl.startsWith('http') ? item.imageUrl : `${process.env.NEXT_PUBLIC_API_URL?.replace(/\/api$/, '').replace(/\/$/, '')}${item.imageUrl.startsWith('/') ? item.imageUrl : '/' + item.imageUrl}`;
                                 console.log('Gallery image src:', imageSrc);
                                 return (
                                     <div key={item._id} className="relative group border rounded-lg overflow-hidden aspect-square">
-                                        <Image 
+                                        <Image
                                             src={item.imageUrl}
                                             alt={item.caption}
-                                            width={300}
-                                            height={300}
-                                            className="object-cover"
+                                            fill
+                                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                            priority
                                         />
                                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex flex-col justify-between p-2">
                                             <p className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity break-words">{item.caption}</p>

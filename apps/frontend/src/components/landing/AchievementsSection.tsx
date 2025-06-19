@@ -10,7 +10,7 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
     <section className="py-20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Dinding Prestasi
           </h2>
           <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
@@ -38,11 +38,11 @@ export function AchievementsSection({ achievements }: AchievementsSectionProps) 
                         {achievement.level}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-card-foreground mb-2 font-[var(--font-poppins)]">
+                    <h3 className="text-lg font-bold text-card-foreground mb-2">
                       {achievement.title}
                     </h3>
                     <p className="text-muted-foreground mb-2 font-[var(--font-inter)]">Diraih oleh: {achievement.achievedBy}</p>
-                    <p className="text-primary font-semibold font-[var(--font-inter)]">{achievement.year}</p>
+                    <p className="text-primary font-semibold">{achievement.year}</p>
                   </div>
                 </div>
 

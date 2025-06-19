@@ -10,7 +10,7 @@ export function GallerySection({ items }: GallerySectionProps) {
     <section id="gallery" className="py-20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
+          <h2 className="text-4xl md:text-5xl text-foreground mb-4 font-[var(--font-poppins)]">
             Momen Tak Terlupakan
           </h2>
           <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
@@ -36,7 +36,7 @@ export function GallerySection({ items }: GallerySectionProps) {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="text-lg font-semibold mt-2 font-[var(--font-poppins)]">{item.caption}</h3>
+                    <h3 className="text-lg mt-2 font-[var(--font-poppins)]">{item.caption}</h3>
                   </div>
                 </div>
               </div>

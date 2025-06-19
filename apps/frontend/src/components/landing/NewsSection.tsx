@@ -11,7 +11,7 @@ export function NewsSection({ news }: NewsSectionProps) {
     <section id="news" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-[var(--font-poppins)]">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Berita Terbaru dari Sekolah Kami
           </h2>
           <p className="text-xl text-muted-foreground font-[var(--font-inter)]">
@@ -42,11 +42,11 @@ export function NewsSection({ news }: NewsSectionProps) {
                   </span>
                   <span className="text-sm text-muted-foreground font-[var(--font-inter)]">{new Date(article.createdAt || '').toLocaleDateString('id-ID')}</span>
                 </div>
-                <h3 className="text-xl font-bold text-card-foreground mb-3 line-clamp-2 font-[var(--font-poppins)]">
+                <h3 className="text-xl font-bold text-card-foreground mb-3 line-clamp-2">
                   {article.title}
                 </h3>
                 <p className="text-muted-foreground mb-4 line-clamp-3 font-[var(--font-inter)]" dangerouslySetInnerHTML={{ __html: article.content.substring(0, 100) + '...' }}></p>
-                <button className="text-primary hover:text-primary/80 font-semibold flex items-center group font-[var(--font-inter)]">
+                <button className="text-primary hover:text-primary/80 font-semibold flex items-center group">
                   Baca Selengkapnya
                   <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </button>
