@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import { User } from '@sipas/types';
+import { getSubdomain } from '@/lib/subdomain';
 
 interface GetAllUsersResponse {
     data: User[];
@@ -21,21 +22,25 @@ export interface UpdateUserData {
 }
 
 export const getAllUsers = async (): Promise<GetAllUsersResponse> => {
-    const response = await api.get<GetAllUsersResponse>('/users');
+    const subdomain = getSubdomain();
+    const response = await api.get<GetAllUsersResponse>('/users', { params: { subdomain } });
     return response.data;
 };
 
 export const createUser = async (data: CreateUserData): Promise<{ data: User }> => {
-    const response = await api.post('/users', data);
+    const subdomain = getSubdomain();
+    const response = await api.post('/users', { ...data, subdomain });
     return response.data;
 };
 
 export const updateUser = async (id: string, data: UpdateUserData): Promise<{ data: User }> => {
-    const response = await api.put(`/users/${id}`, data);
+    const subdomain = getSubdomain();
+    const response = await api.put(`/users/${id}`, { ...data, subdomain });
     return response.data;
 };
 
 export const deleteUser = async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete(`/users/${id}`);
+    const subdomain = getSubdomain();
+    const response = await api.delete(`/users/${id}`, { data: { subdomain } });
     return response.data;
 };
