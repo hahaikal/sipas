@@ -4,7 +4,7 @@ import { protect, admin } from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.get('/', achievementController.getAllAchievements);
+router.get('/', protect, admin, achievementController.getAllAchievements);
 
 router.post('/', protect, admin, achievementController.createAchievement);
 router.delete('/:id', protect, admin, achievementController.deleteAchievement);

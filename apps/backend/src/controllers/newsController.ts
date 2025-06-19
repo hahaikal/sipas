@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import News from '../models/News';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
@@ -39,8 +39,7 @@ export const getNewsById = async (req: AuthenticatedRequest, res: Response, next
         if (news) {
             res.status(200).json({ data: news });
         } else {
-            res.status(404);
-            throw new Error('Berita tidak ditemukan');
+            res.status(404).send({ message: 'Berita tidak ditemukan' });
         }
     } catch (error) {
         next(error);
@@ -61,8 +60,7 @@ export const updateNews = async (req: AuthenticatedRequest, res: Response, next:
             const updatedNews = await news.save();
             res.status(200).json({ message: 'Berita berhasil diperbarui.', data: updatedNews });
         } else {
-            res.status(404);
-            throw new Error('Berita tidak ditemukan');
+            res.status(404).send({ message: 'Berita tidak ditemukan' });
         }
     } catch (error) {
         next(error);
@@ -78,8 +76,7 @@ export const deleteNews = async (req: AuthenticatedRequest, res: Response, next:
             await news.deleteOne();
             res.status(200).json({ message: 'Berita berhasil dihapus.' });
         } else {
-            res.status(404);
-            throw new Error('Berita tidak ditemukan');
+            res.status(404).send({ message: 'Berita tidak ditemukan' });
         }
     } catch (error) {
         next(error);

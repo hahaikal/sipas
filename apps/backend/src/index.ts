@@ -12,6 +12,7 @@ import userRoutes from './routes/userRoutes';
 import newsRoutes from './routes/newsRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import achievementRoutes from './routes/achievementRoutes';
+import publicRoutes from './routes/publicRoutes'; 
 import { redisClient, connectRedis } from './config/redisClient';
 
 import './models/User';
@@ -39,10 +40,12 @@ app.use('/api/news', newsRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/public', publicRoutes);
 
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({ message: err.message || 'Terjadi kesalahan pada server.' });
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({ message: err.message || 'Terjadi kesalahan pada server.' });
 });
 
 async function startServer() {

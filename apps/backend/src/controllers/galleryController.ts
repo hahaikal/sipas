@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import Gallery from '../models/Gallery';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { storageService } from '../services/storageService';
@@ -7,8 +7,7 @@ export const createGalleryItem = async (req: AuthenticatedRequest, res: Response
     try {
         const { caption } = req.body;
         if (!req.file) {
-            res.status(400).json({ message: 'File gambar harus diunggah.' });
-            return;
+            return res.status(400).json({ message: 'File gambar harus diunggah.' });
         }
         const schoolId = req.user?.schoolId;
 
@@ -51,8 +50,8 @@ export const deleteGalleryItem = async (req: AuthenticatedRequest, res: Response
         const item = await Gallery.findOne({ _id: req.params.id, schoolId });
 
         if (!item) {
-            res.status(404);
-            throw new Error('Item galeri tidak ditemukan');
+            res.status(404).send({ message: 'Item galeri tidak ditemukan' });
+            return;
         }
 
         await storageService.delete(item.imageUrl, 'cloudinary');

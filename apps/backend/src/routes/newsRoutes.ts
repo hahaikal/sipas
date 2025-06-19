@@ -5,10 +5,10 @@ import { protect, admin } from '../middleware/authMiddleware';
 const router = Router();
 
 router.route('/')
-    .get(newsController.getAllNews);
+    .get(protect, admin, newsController.getAllNews);
 
 router.route('/:id')
-    .get(newsController.getNewsById);
+    .get(protect, admin, newsController.getNewsById);
 
 router.route('/')
     .post(protect, admin, newsController.createNews);

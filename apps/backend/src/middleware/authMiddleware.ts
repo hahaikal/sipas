@@ -30,10 +30,20 @@ export const protect = asyncHandler(async (req: AuthenticatedRequest, res: Respo
         res.status(401);
         throw new Error('Not authorized, user not found');
       }
+      
+      const { subdomain } = req.body;
 
-      if (req.user.schoolId.toString() !== decoded.schoolId) {
-        res.status(401);
-        throw new Error('Not authorized, school mismatch');
+      if (subdomain) {
+          const school = await School.findOne({ subdomain: subdomain, status: 'active' }) as (typeof School.prototype & { _id: any }) | null;
+          if (!school) {
+            res.status(404);
+            throw new Error(`School with subdomain "${subdomain}" not found or inactive`);
+          }
+
+          if (req.user.schoolId.toString() !== school._id.toString()) {
+              res.status(401);
+              throw new Error('Not authorized, user does not belong to this school');
+          }
       }
 
       (req.user as any).schoolId = decoded.schoolId;

@@ -11,8 +11,8 @@ router.route('/')
 
 router.route('/:id')
   // .get(userController.getUserById)
-  .put(userController.updateUser)
-  .delete(userController.deleteUser);
+  .put(protect, admin, userController.updateUser)
+  .delete(protect, admin, userController.deleteUser);
 
 router.get('/by-phone/:phone', verifyApiKey, userController.getUserByPhone);
 

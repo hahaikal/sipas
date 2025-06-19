@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import User from '../models/User';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
@@ -13,12 +13,13 @@ export const getAllUsers = async (req: AuthenticatedRequest, res: Response, next
 
 export const createUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { name, email, phone, password, role, schoolId } = req.body;
+        const { name, email, phone, password, role } = req.body;
+        const schoolId = req.user?.schoolId;
 
-        const userExists = await User.findOne({ $or: [{ email }, { phone }], schoolId: schoolId || req.user?.schoolId });
+        const userExists = await User.findOne({ $or: [{ email }, { phone }], schoolId: schoolId });
         if (userExists) {
             res.status(400);
-            throw new Error('Email atau nomor telepon sudah terdaftar');
+            throw new Error('Email atau nomor telepon sudah terdaftar di sekolah ini');
         }
 
         const user = await User.create({
@@ -27,7 +28,7 @@ export const createUser = async (req: AuthenticatedRequest, res: Response, next:
             phone,
             password,
             role,
-            schoolId: schoolId || req.user?.schoolId,
+            schoolId: schoolId,
         });
 
         if (user) {
@@ -52,7 +53,6 @@ export const createUser = async (req: AuthenticatedRequest, res: Response, next:
 export const updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { name, email, phone, role } = req.body;
-
         const user = await User.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
         if (!user) {
@@ -105,8 +105,12 @@ export const getUserByPhone = async (req: AuthenticatedRequest, res: Response, n
         if (phone.startsWith('62')) {
             phone = '0' + phone.slice(2);
         }
-
-        const user = await User.findOne({ phone: phone, schoolId: req.user?.schoolId }).select('-password');
+        
+        // Asumsi: Bot API key tidak terikat pada satu sekolah, jadi perlu info sekolah
+        // Untuk saat ini, kita akan asumsikan bot bekerja pada satu konteks sekolah yang
+        // bisa di-pass atau di-config di masa depan.
+        // Untuk sekarang, kita cari user berdasarkan nomor telepon saja.
+        const user = await User.findOne({ phone: phone }).select('-password');
 
         if (!user) {
             res.status(404);
