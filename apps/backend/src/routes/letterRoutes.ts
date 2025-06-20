@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as letterController from '../controllers/letterController';
 import { upload } from '../middleware/uploadMiddleware';
-import { protect } from '../middleware/authMiddleware';
+import { protect, isApprover } from '../middleware/authMiddleware';
 import { verifyApiKey } from '../middleware/apiKeyMiddleware';
 
 const router = Router();
@@ -11,6 +11,9 @@ function asyncHandler(fn: any) {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
+
+router.patch('/:id/approve', protect, isApprover, letterController.approveLetter);
+router.patch('/:id/reject', protect, isApprover, letterController.rejectLetter);
 
 router.post('/bot-upload', verifyApiKey, upload.single('file'), asyncHandler(letterController.createLetterFromBot));
 

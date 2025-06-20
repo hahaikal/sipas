@@ -1,5 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
+type LetterStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 interface ILetter {
   nomorSurat: string;
   judul: string;
@@ -9,6 +11,8 @@ interface ILetter {
   fileUrl: string;
   createdBy: Types.ObjectId;
   schoolId: Types.ObjectId;
+  status: LetterStatus;
+  rejectionReason?: string;
 }
 
 export interface ILetterDocument extends ILetter, Document {}
@@ -51,7 +55,19 @@ const letterSchema = new Schema<ILetterDocument>({
     required: true,
     index: true,
   },
+  status: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'PENDING',
+    required: true,
+  },
+  rejectionReason: {
+    type: String,
+    required: false,
+  },
 }, { timestamps: true });
+
+letterSchema.index({ schoolId: 1, status: 1 });
 
 const Letter = model<ILetterDocument>('Sipas-Letter', letterSchema);
 

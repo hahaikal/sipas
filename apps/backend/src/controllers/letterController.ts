@@ -61,7 +61,14 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
 export const getAllLetters = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const schoolId = await getSchoolIdFromSubdomain(req);
-        const letters = await Letter.find({ schoolId: schoolId }).populate('createdBy', 'name email');
+        const { status } = req.body;
+
+        const filter: { schoolId: any; status?: string } = { schoolId: schoolId };
+        if (status && ['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
+            filter.status = status;
+        }
+
+        const letters = await Letter.find(filter).populate('createdBy', 'name email');
         res.status(200).json({ data: letters });
     } catch (error) {
         next(error);
@@ -224,7 +231,6 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
       throw new Error('Surat tidak ditemukan');
     }
 
-    // Use storageService to get the download URL from Backblaze B2
     const fileIdentifier = letter.fileUrl;
     let fileId = '';
     let fileName = '';
@@ -243,4 +249,61 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
   } catch (error) {
     next(error);
   }
+};
+
+export const approveLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const schoolId = req.user?.schoolId;
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId });
+
+        if (!letter) {
+            res.status(404);
+            throw new Error('Surat tidak ditemukan');
+        }
+
+        if (letter.status !== 'PENDING') {
+            res.status(400);
+            throw new Error(`Surat dengan status ${letter.status} tidak dapat disetujui.`);
+        }
+
+        letter.status = 'APPROVED';
+        letter.rejectionReason = undefined;
+        await letter.save();
+
+        res.status(200).json({ message: 'Surat berhasil disetujui.', data: letter });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const rejectLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const schoolId = req.user?.schoolId;
+        const { reason } = req.body;
+
+        if (!reason) {
+            res.status(400);
+            throw new Error('Alasan penolakan wajib diisi.');
+        }
+
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId });
+
+        if (!letter) {
+            res.status(404);
+            throw new Error('Surat tidak ditemukan');
+        }
+
+        if (letter.status !== 'PENDING') {
+            res.status(400);
+            throw new Error(`Surat dengan status ${letter.status} tidak dapat ditolak.`);
+        }
+
+        letter.status = 'REJECTED';
+        letter.rejectionReason = reason;
+        await letter.save();
+
+        res.status(200).json({ message: 'Surat berhasil ditolak.', data: letter });
+    } catch (error) {
+        next(error);
+    }
 };

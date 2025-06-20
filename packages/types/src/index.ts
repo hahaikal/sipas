@@ -17,4 +17,6 @@ export interface Letter {
   tipeSurat: 'masuk' | 'keluar';
   fileUrl: string;
   createdBy: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
 }

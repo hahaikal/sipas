@@ -71,6 +71,15 @@ export const admin = (req: AuthenticatedRequest, res: Response, next: NextFuncti
     }
 }
 
+export const isApprover = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user && req.user.role === 'kepala sekolah') {
+        next();
+    } else {
+        res.status(403);
+        throw new Error('Not authorized as an approver');
+    }
+}
+
 export const getSchoolIdFromSubdomain = async (req: AuthenticatedRequest) => {
   const subdomain = req.body.subdomain;
   if (!subdomain) {
