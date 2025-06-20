@@ -37,7 +37,10 @@ export default function NewsForm({ onSubmit, initialData, isLoading = false }: N
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        onSubmit(formData);
+        onSubmit({
+            ...formData,
+            author: initialData?.author || '',
+        });
     };
 
     return (

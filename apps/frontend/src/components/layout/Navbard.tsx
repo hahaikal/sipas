@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Bell, ChevronDown } from 'lucide-react';
 
-// A simple Avatar placeholder
 const Avatar = ({ name }: { name: string }) => (
   <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
     {name.charAt(0).toUpperCase()}

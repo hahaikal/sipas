@@ -70,7 +70,7 @@ export default function ManageAchievementsPage() {
                             <div><Label>Deskripsi</Label><Textarea name="description" onChange={handleInputChange} required /></div>
                             <div><Label>Tahun</Label><Input name="year" type="number" onChange={handleInputChange} required /></div>
                             <div><Label>Tingkat</Label>
-                                <Select name="level" onValueChange={(value) => setFormData({...formData, level: value as any})}>
+                                <Select name="level" onValueChange={(value: AchievementData['level']) => setFormData({...formData, level: value})}>
                                     <SelectTrigger><SelectValue placeholder="Pilih Tingkat" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Sekolah">Sekolah</SelectItem>
