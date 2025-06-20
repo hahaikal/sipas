@@ -23,9 +23,10 @@ export interface UpdateLetterData {
   tipeSurat?: 'masuk' | 'keluar';
 }
 
-export const getAllLetters = async (): Promise<GetAllLettersResponse> => {
+export const getAllLetters = async (params?: { status: 'PENDING' | 'APPROVED' | 'REJECTED' }): Promise<GetAllLettersResponse> => {
     const subdomain = getSubdomain();
-    const response = await api.post<GetAllLettersResponse>('/letters/list', { subdomain });
+    const payload = { subdomain, ...params };
+    const response = await api.post<GetAllLettersResponse>('/letters/list', payload);
     return response.data;
 };
 
@@ -69,5 +70,15 @@ export const updateLetter = async (id: string, data: UpdateLetterData): Promise<
 export const getLetterViewUrl = async (id: string): Promise<{ url: string }> => {
     const subdomain = getSubdomain();
     const response = await api.post<{ url: string }>(`/letters/${id}/view`, { subdomain });
+    return response.data;
+};
+
+export const approveLetter = async (id: string): Promise<Letter> => {
+    const response = await api.patch(`/letters/${id}/approve`);
+    return response.data;
+};
+
+export const rejectLetter = async (id: string, reason: string): Promise<Letter> => {
+    const response = await api.patch(`/letters/${id}/reject`, { reason });
     return response.data;
 };

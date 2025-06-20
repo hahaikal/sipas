@@ -31,8 +31,7 @@ export default function EditLetterPage() {
     const fetchLetterData = async () => {
       setIsLoading(true);
       try {
-        const subdomain = 'smaharapanbangsa';
-        const response = await getLetterById(id, subdomain);
+        const response = await getLetterById(id);
         const letter = response.data;
         const formattedDate = new Date(letter.tanggalSurat).toISOString().split('T')[0];
         setFormData({ ...letter, tanggalSurat: formattedDate });
@@ -58,7 +57,7 @@ export default function EditLetterPage() {
     setSuccess(null);
 
     try {
-      await updateLetter(id, formData, 'smaharapanbangsa');
+      await updateLetter(id, formData);
       setSuccess('Surat berhasil diperbarui! Mengarahkan kembali ke daftar arsip...');
       setTimeout(() => router.push('/dashboard/arsip'), 2000);
     } catch (err: unknown) {

@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/statusBadge';
 import { Trash2, FilePenLine, Eye } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -27,6 +28,7 @@ interface Letter {
   tanggalSurat: string;
   tipeSurat: 'masuk' | 'keluar';
   kategori: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export default function ArsipPage() {
@@ -43,8 +45,7 @@ export default function ArsipPage() {
   const fetchLetters = async () => {
     setIsLoading(true);
     try {
-      const subdomain = 'smaharapanbangsa';
-      const response = await getAllLetters(subdomain);
+      const response = await getAllLetters();
       setAllLetters(response.data);
       setFilteredLetters(response.data);
     } catch (err: unknown) {
@@ -68,7 +69,7 @@ export default function ArsipPage() {
 
   const handleDelete = async (id: string) => {
     try {
-        await deleteLetter(id, 'smaharapanbangsa');
+        await deleteLetter(id);
         setAllLetters(prev => prev.filter(letter => letter._id !== id));
     } catch (err) {
         console.error("Gagal menghapus surat:", err);
@@ -109,6 +110,9 @@ export default function ArsipPage() {
                       <TableCell>{letter.nomorSurat}</TableCell>
                       <TableCell className="font-medium">{letter.judul}</TableCell>
                       <TableCell>{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={letter.status || 'PENDING'} />
+                      </TableCell>
                       <TableCell className="text-right flex justify-end gap-2">
                         <Link href={`/dashboard/arsip/${letter._id}/view`}>
                           <Button variant="outline" size="sm">
