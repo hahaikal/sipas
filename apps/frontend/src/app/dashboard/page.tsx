@@ -1,30 +1,54 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatisticCard } from '@/components/dashboard/StatisticCard';
 import { ArrowDownToLine, ArrowUpFromLine, FilePlus2, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDashboardStats } from '@/services/dashboardService';
+import { getLatestLetters } from '@/services/letterService';
+import ApprovalTasksComponent from '@/components/dashboard/ApprovalTasksComponent';
+import { Letter } from '@sipas/types';
 
 export default function DashboardPage() {
-  // Mock data - akan diganti dengan data dari API
-  const stats = [
-    { title: "Surat Masuk", value: "150", icon: ArrowDownToLine, description: "+20.1% dari bulan lalu" },
-    { title: "Surat Keluar", value: "74", icon: ArrowUpFromLine, description: "+18.3% dari bulan lalu" },
-    { title: "Pendaftar PPDB", value: "235", icon: Users, description: "Tahun Ajaran 2025/2026" },
-  ];
+  const { user } = useAuth();
 
-  const recentLetters = [
-    { no: "001/A/UND/2025", title: "Undangan Rapat Wali Murid", date: "14 Juni 2025" },
-    { no: "002/B/SK/2025", title: "SK Panitia Ujian Sekolah", date: "13 Juni 2025" },
-    { no: "003/C/EDR/2025", title: "Surat Edaran Libur Semester", date: "12 Juni 2025" },
-  ];
+  const [stats, setStats] = useState([
+    { title: "Surat Masuk", value: "0", icon: ArrowDownToLine, description: "" },
+    { title: "Surat Keluar", value: "0", icon: ArrowUpFromLine, description: "" },
+    { title: "Pendaftar PPDB", value: "0", icon: Users, description: "" },
+  ]);
 
-  const approvalTasks = [
-     { title: "Pengajuan Dana Kegiatan 17 Agustus", from: "Budi (Kesiswaan)" },
-     { title: "Permohonan Izin Studi Banding", from: "Siti (Kurikulum)" },
-  ];
+  const [recentLetters, setRecentLetters] = useState<Letter[]>([]);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await getDashboardStats();
+        setStats([
+          { title: "Surat Masuk", value: data.suratMasuk.toString(), icon: ArrowDownToLine, description: "" },
+          { title: "Surat Keluar", value: data.suratKeluar.toString(), icon: ArrowUpFromLine, description: "" },
+          { title: "Pendaftar PPDB", value: data.pendaftarPpdb.toString(), icon: Users, description: "" },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      }
+    }
+
+    async function fetchRecentLetters() {
+      try {
+        const letters = await getLatestLetters(5);
+        setRecentLetters(letters);
+      } catch (error) {
+        console.error("Failed to fetch recent letters", error);
+      }
+    }
+
+    fetchStats();
+    fetchRecentLetters();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -38,75 +62,50 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Bagian Tengah (Grid Statistik) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map(stat => (
           <StatisticCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      {/* Bagian Bawah (Dua Kolom) */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-        
-        {/* Kolom Kiri */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Tugas & Persetujuan Anda</CardTitle>
             <CardDescription>Surat atau pengajuan yang memerlukan tindakan dari Anda.</CardDescription>
           </CardHeader>
           <CardContent>
-            {approvalTasks.length > 0 ? (
-               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Judul</TableHead>
-                    <TableHead>Dari</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {approvalTasks.map((task, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell>{task.from}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm">Lihat Detail</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            {user?.role === 'kepala sekolah' ? (
+              <ApprovalTasksComponent />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">Tidak ada tugas untuk Anda saat ini.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Kolom Kanan */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Surat Terbaru Diarsip</CardTitle>
             <CardDescription>Daftar surat yang baru saja masuk ke sistem.</CardDescription>
           </CardHeader>
           <CardContent>
-             {recentLetters.length > 0 ? (
-               <div className="space-y-4">
-                 {recentLetters.map((letter, index) => (
-                   <div key={index} className="flex items-center">
-                     <div className="flex-1 space-y-1">
-                       <p className="text-sm font-medium leading-none">{letter.title}</p>
-                       <p className="text-xs text-muted-foreground">{letter.no}</p>
-                     </div>
-                     <div className="text-sm text-muted-foreground">{letter.date}</div>
-                   </div>
-                 ))}
-               </div>
+            {recentLetters.length > 0 ? (
+              <div className="space-y-4">
+                {recentLetters.map((letter, index) => (
+                  <div key={index} className="flex items-center">
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none">{letter.judul}</p>
+                      <p className="text-xs text-muted-foreground">{letter.nomorSurat}</p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">Belum ada surat yang diarsipkan.</p>
             )}
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

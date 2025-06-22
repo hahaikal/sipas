@@ -1,8 +1,9 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { deleteLetter, getAllLetters } from '@/services/letterService';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ interface Letter {
 }
 
 export default function ArsipPage() {
+  const { user } = useAuth();
   const [allLetters, setAllLetters] = useState<Letter[]>([]);
   const [filteredLetters, setFilteredLetters] = useState<Letter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,8 +41,12 @@ export default function ArsipPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchLetters();
-  }, []);
+    if (user?.role === 'admin' || user?.role === 'kepala sekolah') {
+      fetchLetters();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   const fetchLetters = async () => {
     setIsLoading(true);
@@ -75,6 +81,10 @@ export default function ArsipPage() {
         console.error("Gagal menghapus surat:", err);
     }
   };
+
+  if (user?.role !== 'admin' && user?.role !== 'kepala sekolah') {
+    return <p className="text-center text-red-600 font-semibold mt-8">Anda tidak memiliki akses ke halaman ini.</p>;
+  }
 
   return (
     <div className="space-y-6">

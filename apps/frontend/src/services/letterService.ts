@@ -82,3 +82,12 @@ export const rejectLetter = async (id: string, reason: string): Promise<Letter> 
     const response = await api.patch(`/letters/${id}/reject`, { reason });
     return response.data;
 };
+
+export const getLatestLetters = async (limit: number): Promise<Letter[]> => {
+    const subdomain = getSubdomain();
+    const response = await api.post<{ data: Letter[] }>('/letters/list', { subdomain });
+    const letters = response.data.data;
+    // Sort letters by tanggalSurat descending and return limited number
+    letters.sort((a, b) => new Date(b.tanggalSurat).getTime() - new Date(a.tanggalSurat).getTime());
+    return letters.slice(0, limit);
+};
