@@ -80,6 +80,15 @@ export const isApprover = (req: AuthenticatedRequest, res: Response, next: NextF
     }
 }
 
+export const requireAdminOrKepsek = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'kepala sekolah')) {
+        next();
+    } else {
+        res.status(403);
+        throw new Error('Not authorized, admin or kepala sekolah role required');
+    }
+}
+
 export const getSchoolIdFromSubdomain = async (req: AuthenticatedRequest) => {
   const subdomain = req.body.subdomain;
   if (!subdomain) {

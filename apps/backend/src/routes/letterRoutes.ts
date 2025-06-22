@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as letterController from '../controllers/letterController';
 import { upload } from '../middleware/uploadMiddleware';
-import { protect, isApprover } from '../middleware/authMiddleware';
+import { protect, isApprover, requireAdminOrKepsek } from '../middleware/authMiddleware';
 import { verifyApiKey } from '../middleware/apiKeyMiddleware';
 
 const router = Router();
@@ -12,6 +12,8 @@ function asyncHandler(fn: any) {
   };
 }
 
+router.get('/dashboard/stats', protect, asyncHandler(letterController.getDashboardStats));
+
 router.patch('/:id/approve', protect, isApprover, letterController.approveLetter);
 router.patch('/:id/reject', protect, isApprover, letterController.rejectLetter);
 
@@ -21,10 +23,10 @@ router.route('/')
   .post(protect, upload.single('file'), asyncHandler(letterController.createLetter));
 
 router.route('/list')
-  .post(protect, asyncHandler(letterController.getAllLetters));
+  .post(protect, requireAdminOrKepsek, asyncHandler(letterController.getAllLetters));
 
 router.route('/:id')
-  .all(protect)
+  .all(protect, requireAdminOrKepsek)
   .post(letterController.getLetterById)
   .put(letterController.updateLetter)
   .delete(letterController.deleteLetter);

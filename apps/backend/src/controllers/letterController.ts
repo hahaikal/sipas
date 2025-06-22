@@ -307,3 +307,21 @@ export const rejectLetter = async (req: AuthenticatedRequest, res: Response, nex
         next(error);
     }
 };
+
+export const getDashboardStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const schoolId = req.user?.schoolId;
+        if (!schoolId) {
+            res.status(400);
+            throw new Error('School ID tidak ditemukan');
+        }
+
+        const suratMasuk = await Letter.countDocuments({ schoolId, tipeSurat: 'masuk' });
+        const suratKeluar = await Letter.countDocuments({ schoolId, tipeSurat: 'keluar' });
+        const pendaftarPpdb = 0; // Placeholder for now
+
+        res.status(200).json({ suratMasuk, suratKeluar, pendaftarPpdb });
+    } catch (error) {
+        next(error);
+    }
+};
