@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as letterController from '../controllers/letterController';
 import { upload } from '../middleware/uploadMiddleware';
-import { protect, isApprover, requireAdminOrKepsek } from '../middleware/authMiddleware';
+import { protect, admin, isApprover } from '../middleware/authMiddleware';
 import { verifyApiKey } from '../middleware/apiKeyMiddleware';
 
 const router = Router();
@@ -12,26 +12,29 @@ function asyncHandler(fn: any) {
   };
 }
 
+router.post('/bot-upload', verifyApiKey, upload.single('file'), asyncHandler(letterController.createLetterFromBot));
+
 router.get('/dashboard/stats', protect, asyncHandler(letterController.getDashboardStats));
 
-router.patch('/:id/approve', protect, isApprover, letterController.approveLetter);
-router.patch('/:id/reject', protect, isApprover, letterController.rejectLetter);
+router.post('/generate-request', protect, asyncHandler(letterController.createLetterRequest));
 
-router.post('/bot-upload', verifyApiKey, upload.single('file'), asyncHandler(letterController.createLetterFromBot));
+router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.approveLetter));
+router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
+router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
 
 router.route('/')
   .post(protect, upload.single('file'), asyncHandler(letterController.createLetter));
 
 router.route('/list')
-  .post(protect, requireAdminOrKepsek, asyncHandler(letterController.getAllLetters));
+  .post(protect, asyncHandler(letterController.getAllLetters));
+
+router.post('/:id/view', protect, letterController.getLetterViewUrl);
 
 router.route('/:id')
-  .all(protect, requireAdminOrKepsek)
+  .all(protect)
   .post(letterController.getLetterById)
   .put(letterController.updateLetter)
   .delete(letterController.deleteLetter);
-
-router.post('/:id/view', protect, letterController.getLetterViewUrl);
 
 router.get('/by-nomor/:nomor', protect, letterController.getLetterByNumber);
 

@@ -13,8 +13,8 @@ import newsRoutes from './routes/newsRoutes';
 import galleryRoutes from './routes/galleryRoutes';
 import achievementRoutes from './routes/achievementRoutes';
 import publicRoutes from './routes/publicRoutes'; 
+import templateRoutes from './routes/templateRoutes';
 import { redisClient, connectRedis } from './config/redisClient';
-
 import './models/User';
 import './models/Letter';
 import './models/News';
@@ -41,6 +41,7 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/templates', templateRoutes); 
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);

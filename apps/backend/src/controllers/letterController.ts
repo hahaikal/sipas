@@ -5,6 +5,11 @@ import School from '../models/School';
 import { AuthenticatedRequest, getSchoolIdFromSubdomain } from '../middleware/authMiddleware';
 import { convertToDate } from '../utils/formatters';
 import { storageService } from '../services/storageService';
+import LetterTemplate from '../models/LetterTemplate';
+import Sequence from '../models/Sequence';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.file) {
@@ -30,6 +35,9 @@ export const createLetter = async (req: AuthenticatedRequest, res: Response, nex
     }
 
     const fileIdentifier = await storageService.upload(req.file, 'b2');
+    if (!fileIdentifier) {
+      throw new Error('File identifier is missing');
+    }
     const fileUrlObj = JSON.parse(fileIdentifier);
 
     const newLetter = new Letter({
@@ -124,6 +132,9 @@ export const deleteLetter = async (req: AuthenticatedRequest, res: Response, nex
         let fileId = '';
         let fileName = '';
         try {
+          if (!fileIdentifier) {
+            throw new Error('File identifier is missing');
+          }
           const parsed = JSON.parse(fileIdentifier);
           fileId = parsed.fileId;
           fileName = parsed.fileName;
@@ -231,12 +242,15 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
       throw new Error('Surat tidak ditemukan');
     }
 
+    if (!letter.fileUrl) {
+        res.status(404);
+        throw new Error('Dokumen final belum tersedia untuk surat ini.');
+    }
+
     const fileIdentifier = letter.fileUrl;
-    let fileId = '';
     let fileName = '';
     try {
       const parsed = JSON.parse(fileIdentifier);
-      fileId = parsed.fileId;
       fileName = parsed.fileName;
     } catch (e) {
       console.error('Failed to parse fileIdentifier in getLetterViewUrl:', fileIdentifier);
@@ -252,61 +266,114 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
 };
 
 export const approveLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    let fileIdentifier: string | null = null;
+    const tempDir = path.join(__dirname, '..', '..', 'temp_pdf');
+    const tempFilePath = path.join(tempDir, `${req.params.id}.pdf`);
+
     try {
         const schoolId = req.user?.schoolId;
         const letter = await Letter.findOne({ _id: req.params.id, schoolId });
 
         if (!letter) {
             res.status(404);
-            throw new Error('Surat tidak ditemukan');
+            throw new Error('Pengajuan surat tidak ditemukan');
         }
-
         if (letter.status !== 'PENDING') {
             res.status(400);
-            throw new Error(`Surat dengan status ${letter.status} tidak dapat disetujui.`);
+            throw new Error(`Surat ini tidak dalam status PENDING (Status saat ini: ${letter.status})`);
+        }
+        if (!letter.content) {
+            res.status(500);
+            throw new Error('Konten surat tidak ditemukan untuk digenerate menjadi PDF.');
         }
 
-        letter.status = 'APPROVED';
-        letter.rejectionReason = undefined;
-        await letter.save();
+        const currentYear = new Date().getFullYear();
+        const sequenceNumber = await getNextSequenceValue(schoolId!.toString(), currentYear);
+        const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
 
-        res.status(200).json({ message: 'Surat berhasil disetujui.', data: letter });
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+        
+        const stream = fs.createWriteStream(tempFilePath);
+        doc.pipe(stream);
+        doc.fontSize(12).text(letter.content, { align: 'justify' });
+        doc.end();
+
+        await new Promise<void>((resolve, reject) => {
+            stream.on('finish', resolve);
+            stream.on('error', reject);
+        });
+
+        const fileStats = fs.statSync(tempFilePath);
+        const mockFile: Express.Multer.File = {
+            fieldname: 'file',
+            originalname: `${letter.judul.replace(/ /g, '_')}.pdf`,
+            encoding: '7bit',
+            mimetype: 'application/pdf',
+            size: fileStats.size,
+            destination: tempDir,
+            filename: `${letter._id}.pdf`,
+            path: tempFilePath,
+            stream: fs.createReadStream(tempFilePath),
+            buffer: fs.readFileSync(tempFilePath),
+        };
+
+        fileIdentifier = await storageService.upload(mockFile, 'b2');
+
+        fs.unlinkSync(tempFilePath);
+
+        letter.nomorSurat = formattedNomorSurat;
+        letter.fileUrl = fileIdentifier;
+        letter.status = 'APPROVED';
+        letter.approvedBy = req.user?.id;
+        letter.tanggalSurat = new Date();
+
+        const updatedLetter = await letter.save();
+
+        res.status(200).json({ message: 'Surat berhasil disetujui dan PDF telah digenerate.', data: updatedLetter });
+
     } catch (error) {
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+
+        if (fileIdentifier) {
+            console.error("Terjadi error setelah upload file. Memulai proses rollback dari B2...");
+            try {
+                await storageService.delete(fileIdentifier, 'b2');
+                console.log("Rollback berhasil: File yatim telah dihapus dari B2.");
+            } catch (cleanupError) {
+                console.error("GAGAL ROLLBACK: Gagal menghapus file yatim di B2. File Identifier:", fileIdentifier, "Error:", cleanupError);
+            }
+        }
+        
         next(error);
     }
 };
 
 export const rejectLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const schoolId = req.user?.schoolId;
-        const { reason } = req.body;
-
-        if (!reason) {
-            res.status(400);
-            throw new Error('Alasan penolakan wajib diisi.');
-        }
-
-        const letter = await Letter.findOne({ _id: req.params.id, schoolId });
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
         if (!letter) {
             res.status(404);
-            throw new Error('Surat tidak ditemukan');
+            throw new Error('Pengajuan surat tidak ditemukan');
         }
-
         if (letter.status !== 'PENDING') {
             res.status(400);
-            throw new Error(`Surat dengan status ${letter.status} tidak dapat ditolak.`);
+            throw new Error(`Hanya surat dengan status PENDING yang bisa ditolak.`);
         }
 
         letter.status = 'REJECTED';
-        letter.rejectionReason = reason;
+        letter.approvedBy = req.user?.id;
         await letter.save();
 
-        res.status(200).json({ message: 'Surat berhasil ditolak.', data: letter });
+        res.status(200).json({ message: 'Pengajuan surat telah ditolak.', data: letter });
     } catch (error) {
         next(error);
     }
 };
+
 
 export const getDashboardStats = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -318,9 +385,75 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
 
         const suratMasuk = await Letter.countDocuments({ schoolId, tipeSurat: 'masuk' });
         const suratKeluar = await Letter.countDocuments({ schoolId, tipeSurat: 'keluar' });
-        const pendaftarPpdb = 0; // Placeholder for now
+        const pendaftarPpdb = 0;
 
         res.status(200).json({ suratMasuk, suratKeluar, pendaftarPpdb });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getNextSequenceValue = async (schoolId: string, year: number) => {
+    const sequenceName = `letter-${schoolId}-${year}`;
+    const sequence = await Sequence.findByIdAndUpdate(
+        sequenceName,
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+    return sequence.seq;
+};
+
+export const createLetterRequest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { templateId, formData } = req.body;
+        const schoolId = req.user?.schoolId;
+
+        if (!templateId || !formData) {
+            res.status(400);
+            throw new Error("Template ID dan data form harus diisi.");
+        }
+
+        const template = await LetterTemplate.findOne({ _id: templateId, schoolId });
+        if (!template) {
+            res.status(404);
+            throw new Error("Template surat tidak ditemukan.");
+        }
+
+        let generatedContent = template.body;
+        for (const key in formData) {
+            const placeholder = new RegExp(`{${key}}`, 'g');
+            generatedContent = generatedContent.replace(placeholder, formData[key]);
+        }
+        
+        const newLetter = new Letter({
+            judul: template.name,
+            tipeSurat: 'generated',
+            content: generatedContent,
+            status: 'PENDING',
+            template: templateId,
+            createdBy: req.user?.id,
+            schoolId,
+        });
+
+        const createdLetter = await newLetter.save();
+        res.status(201).json({ message: 'Pengajuan surat berhasil dibuat.', data: createdLetter });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getLetterPreview = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
+
+        if (!letter) {
+            res.status(404);
+            throw new Error('Surat tidak ditemukan.');
+        }
+
+        res.status(200).json({ content: letter.content || 'Konten tidak tersedia.' });
+
     } catch (error) {
         next(error);
     }
