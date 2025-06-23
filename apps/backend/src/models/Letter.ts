@@ -1,18 +1,18 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-type LetterStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-
 interface ILetter {
-  nomorSurat: string;
+  nomorSurat?: string;
   judul: string;
   tanggalSurat: Date;
-  kategori: string;
-  tipeSurat: 'masuk' | 'keluar';
-  fileUrl: string;
+  kategori?: string;
+  tipeSurat: 'masuk' | 'keluar' | 'generated';
+  fileUrl?: string;
+  content?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
   createdBy: Types.ObjectId;
+  approvedBy?: Types.ObjectId;
+  template?: Types.ObjectId;
   schoolId: Types.ObjectId;
-  status: LetterStatus;
-  rejectionReason?: string;
 }
 
 export interface ILetterDocument extends ILetter, Document {}
@@ -20,8 +20,9 @@ export interface ILetterDocument extends ILetter, Document {}
 const letterSchema = new Schema<ILetterDocument>({
   nomorSurat: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true,
+    trim: true,
   },
   judul: {
     type: String,
@@ -30,24 +31,39 @@ const letterSchema = new Schema<ILetterDocument>({
   tanggalSurat: {
     type: Date,
     required: true,
+    default: Date.now,
   },
   kategori: {
     type: String,
-    required: true,
   },
   tipeSurat: {
     type: String,
-    enum: ['masuk', 'keluar'],
+    enum: ['masuk', 'keluar', 'generated'],
     required: true,
   },
   fileUrl: {
     type: String,
-    required: true,
+  },
+  content: {
+      type: String,
+  },
+  status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED'],
+      default: 'ARCHIVED',
   },
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+  },
+  approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+  },
+  template: {
+      type: Schema.Types.ObjectId,
+      ref: 'LetterTemplate',
   },
   schoolId: {
     type: Schema.Types.ObjectId,
@@ -55,19 +71,7 @@ const letterSchema = new Schema<ILetterDocument>({
     required: true,
     index: true,
   },
-  status: {
-    type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED'],
-    default: 'PENDING',
-    required: true,
-  },
-  rejectionReason: {
-    type: String,
-    required: false,
-  },
 }, { timestamps: true });
-
-letterSchema.index({ schoolId: 1, status: 1 });
 
 const Letter = model<ILetterDocument>('Sipas-Letter', letterSchema);
 
