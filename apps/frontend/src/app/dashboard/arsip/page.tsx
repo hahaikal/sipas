@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/ui/statusBadge';
+import { Badge } from '@/components/ui/badge';
 import { Trash2, FilePenLine, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { Letter } from '@sipas/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,16 +22,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Letter {
-  _id: string;
-  nomorSurat: string;
-  judul: string;
-  tanggalSurat: string;
-  tipeSurat: 'masuk' | 'keluar';
-  kategori: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
 
 export default function ArsipPage() {
   const { user } = useAuth();
@@ -82,11 +73,20 @@ export default function ArsipPage() {
     }
   };
 
+  const getStatusVariant = (status?: string) => {
+    switch(status) {
+        case 'APPROVED': return 'default';
+        case 'PENDING': return 'secondary';
+        case 'REJECTED': return 'destructive';
+        default: return 'outline';
+    }
+  }
+
   if (user?.role !== 'admin' && user?.role !== 'kepala sekolah') {
     return <p className="text-center text-red-600 font-semibold mt-8">Anda tidak memiliki akses ke halaman ini.</p>;
   }
 
-  return (
+   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Daftar Arsip Surat</h1>
       <Card>
@@ -101,15 +101,13 @@ export default function ArsipPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="mb-4"
           />
-          {isLoading && <p>Memuat data...</p>}
-          {error && <p className="text-destructive">{error}</p>}
-          {!isLoading && (
+          {isLoading ? <p>Memuat data...</p> : error ? <p className="text-destructive">{error}</p> : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nomor Surat</TableHead>
                   <TableHead>Judul</TableHead>
-                  <TableHead>Tanggal Surat</TableHead>
+                  <TableHead>Nomor Surat</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -117,55 +115,47 @@ export default function ArsipPage() {
                 {filteredLetters.length > 0 ? (
                   filteredLetters.map((letter) => (
                     <TableRow key={letter._id}>
-                      <TableCell>{letter.nomorSurat}</TableCell>
                       <TableCell className="font-medium">{letter.judul}</TableCell>
-                      <TableCell>{new Date(letter.tanggalSurat).toLocaleDateString('id-ID')}</TableCell>
+                      <TableCell>{letter.nomorSurat || '-'}</TableCell>
                       <TableCell>
-                        <StatusBadge status={letter.status || 'PENDING'} />
+                        {letter.status ? (
+                            <Badge variant={getStatusVariant(letter.status)}>{letter.status}</Badge>
+                        ) : (
+                            <Badge variant="outline">{letter.tipeSurat}</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right flex justify-end gap-2">
                         <Link href={`/dashboard/arsip/${letter._id}/view`}>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            disabled={user?.role === 'guru' && letter.status === 'PENDING'} 
+                            title={user?.role === 'guru' && letter.status === 'PENDING' ? 'Menunggu persetujuan' : 'Lihat Detail'}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Link href={`/dashboard/arsip/${letter._id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            <FilePenLine className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. Ini akan menghapus surat
-                                secara permanen dari server.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(letter._id)}>
-                                Ya, Hapus
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {user?.role === 'admin' && (letter.tipeSurat as string) !== 'generated' && (
+                            <>
+                                <Link href={`/dashboard/arsip/${letter._id}/edit`}>
+                                <Button variant="outline" size="icon"><FilePenLine className="h-4 w-4" /></Button>
+                                </Link>
+                                <AlertDialog>
+                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus surat secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(letter._id)}>Ya, Hapus</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            </>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      Tidak ada data yang ditemukan.
-                    </TableCell>
-                  </TableRow>
-                )}
+                ) : <TableRow><TableCell colSpan={4} className="h-24 text-center">Tidak ada data yang ditemukan.</TableCell></TableRow>}
               </TableBody>
             </Table>
           )}

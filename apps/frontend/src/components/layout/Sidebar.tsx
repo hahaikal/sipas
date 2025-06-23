@@ -15,11 +15,12 @@ const Sidebar = () => {
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/arsip", label: "Daftar Arsip", icon: Archive },
     { href: "/dashboard/upload", label: "Upload Surat", icon: Upload },
-    { href: "#", label: "Pembuatan Surat", icon: FileText }, // Placeholder
+    { href: "/dashboard/ajukan-surat", label: "Pembuatan Surat", icon: FileText },
   ];
 
   const adminLinks = [
     { href: "/dashboard/user", label: "Manajemen Pengguna", icon: User },
+    { href: "/dashboard/templates", label: "Template Surat", icon: FileText },
   ];
 
   const contentLinks = [

@@ -1,4 +1,6 @@
 export type UserRole = 'admin' | 'guru' | 'kepala sekolah';
+export * from './template';
+export * from './news';
 
 export interface User {
   _id: string;
@@ -14,9 +16,8 @@ export interface Letter {
   judul: string;
   tanggalSurat: string;
   kategori: string;
-  tipeSurat: 'masuk' | 'keluar';
+  tipeSurat: 'masuk' | 'keluar' | 'generated'; 
   fileUrl: string;
   createdBy: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  rejectionReason?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 }

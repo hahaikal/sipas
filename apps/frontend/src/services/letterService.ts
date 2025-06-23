@@ -23,6 +23,12 @@ export interface UpdateLetterData {
   tipeSurat?: 'masuk' | 'keluar';
 }
 
+export interface GenerateLetterPayload {
+  templateId: string;
+  formData: Record<string, unknown>;
+}
+
+
 export const getAllLetters = async (params?: { status: 'PENDING' | 'APPROVED' | 'REJECTED' }): Promise<GetAllLettersResponse> => {
     const subdomain = getSubdomain();
     const payload = { subdomain, ...params };
@@ -73,21 +79,31 @@ export const getLetterViewUrl = async (id: string): Promise<{ url: string }> => 
     return response.data;
 };
 
-export const approveLetter = async (id: string): Promise<Letter> => {
+export const approveLetter = async (id: string): Promise<{ message: string; data: Letter }> => {
     const response = await api.patch(`/letters/${id}/approve`);
     return response.data;
-};
+}
 
-export const rejectLetter = async (id: string, reason: string): Promise<Letter> => {
-    const response = await api.patch(`/letters/${id}/reject`, { reason });
+export const rejectLetter = async (id: string): Promise<{ message: string; data: Letter }> => {
+    const response = await api.patch(`/letters/${id}/reject`);
     return response.data;
-};
+}
 
 export const getLatestLetters = async (limit: number): Promise<Letter[]> => {
     const subdomain = getSubdomain();
     const response = await api.post<{ data: Letter[] }>('/letters/list', { subdomain });
     const letters = response.data.data;
-    // Sort letters by tanggalSurat descending and return limited number
     letters.sort((a, b) => new Date(b.tanggalSurat).getTime() - new Date(a.tanggalSurat).getTime());
     return letters.slice(0, limit);
 };
+
+export const generateLetterFromTemplate = async (payload: GenerateLetterPayload): Promise<{ message: string; data: Letter }> => {
+    const response = await api.post('/letters/generate-request', payload);
+    return response.data;
+};
+
+export const getLetterPreview = async (id: string): Promise<{ content: string }> => {
+    const response = await api.get(`/letters/${id}/preview`);
+    return response.data;
+};
+
