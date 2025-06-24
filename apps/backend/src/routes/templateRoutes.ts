@@ -1,16 +1,18 @@
 import { Router } from 'express';
 import * as templateController from '../controllers/templateController';
-import { protect, admin } from '../middleware/authMiddleware';
+import { protect, requireAdminOrKepsek } from '../middleware/authMiddleware';
 
 const router = Router();
 
+router.use(protect, requireAdminOrKepsek);
+
 router.route('/')
-  .get(protect, templateController.getAllTemplates)
-  .post(protect, admin, templateController.createTemplate);
+  .get(templateController.getAllTemplates)
+  .post(templateController.createTemplate);
 
 router.route('/:id')
-  .get(protect, templateController.getTemplateById)
-  .put(protect, admin, templateController.updateTemplate)
-  .delete(protect, admin, templateController.deleteTemplate);
+  .get(templateController.getTemplateById)
+  .put(templateController.updateTemplate)
+  .delete(templateController.deleteTemplate);
 
 export default router;

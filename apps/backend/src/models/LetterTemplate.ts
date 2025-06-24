@@ -1,23 +1,21 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-export interface IRequiredInput {
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'date' | 'number';
+export interface IPlaceholder {
+  key: string;
+  description: string;
 }
 
 export interface ILetterTemplate extends Document {
   name: string;
   description: string;
   body: string;
-  requiredInputs: IRequiredInput[];
+  placeholders: IPlaceholder[];
   schoolId: Types.ObjectId;
 }
 
-const requiredInputSchema = new Schema<IRequiredInput>({
-  name: { type: String, required: true },
-  label: { type: String, required: true },
-  type: { type: String, enum: ['text', 'textarea', 'date', 'number'], required: true },
+const placeholderSchema = new Schema<IPlaceholder>({
+  key: { type: String, required: true },
+  description: { type: String, required: true },
 }, { _id: false });
 
 const letterTemplateSchema = new Schema<ILetterTemplate>({
@@ -33,7 +31,7 @@ const letterTemplateSchema = new Schema<ILetterTemplate>({
     type: String,
     required: true,
   },
-  requiredInputs: [requiredInputSchema],
+  placeholders: [placeholderSchema],
   schoolId: {
     type: Schema.Types.ObjectId,
     ref: 'School',
