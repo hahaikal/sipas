@@ -1,17 +1,10 @@
 import api from '@/lib/api';
-import { LetterTemplate } from '@sipas/types'
+import { LetterTemplate } from '@sipas/types';
 
-export interface RequiredInput {
-  name: string;
-  label: string;
-  type: 'text' | 'textarea' | 'date' | 'number';
-}
-
-export type CreateTemplateData = Omit<LetterTemplate, '_id' | 'createdAt' | 'updatedAt'>;
+export type CreateTemplateData = Omit<LetterTemplate, '_id' | 'schoolId' | 'createdAt' | 'updatedAt'>;
 export type UpdateTemplateData = Partial<CreateTemplateData>;
 
-
-export const getTemplates = async (): Promise<{ data: Pick<LetterTemplate, '_id' | 'name' | 'description'>[] }> => {
+export const getTemplates = async (): Promise<{ data: LetterTemplate[] }> => {
     const response = await api.get('/templates');
     return response.data;
 };

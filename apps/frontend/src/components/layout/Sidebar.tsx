@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Upload, Archive, User, Newspaper, GalleryHorizontal, Award, FileText, Building2 } from 'lucide-react';
+import { Home, Upload, Archive, User, Newspaper, GalleryHorizontal, Award, FileText, Building2, FileCog } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const Sidebar = () => {
 
   const adminLinks = [
     { href: "/dashboard/user", label: "Manajemen Pengguna", icon: User },
-    { href: "/dashboard/templates", label: "Template Surat", icon: FileText },
+    { href: "/dashboard/templates", label: "Manajemen Template", icon: FileCog },
   ];
 
   const contentLinks = [
@@ -50,7 +50,7 @@ const Sidebar = () => {
           </Link>
         ))}
         
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'kepala sekolah') && (
           <>
             <div className="mt-4 mb-2 px-2 text-xs font-semibold text-gray-400 uppercase">Admin Area</div>
             {adminLinks.map(link => (
