@@ -9,6 +9,7 @@ interface ILetter {
   fileUrl?: string;
   content?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+  formData?: Map<string, any>;
   createdBy: Types.ObjectId;
   approvedBy?: Types.ObjectId;
   template?: Types.ObjectId;
@@ -52,6 +53,7 @@ const letterSchema = new Schema<ILetterDocument>({
       enum: ['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED'],
       default: 'ARCHIVED',
   },
+  formData: { type: Map, of: String },
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',

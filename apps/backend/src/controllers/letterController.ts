@@ -8,8 +8,11 @@ import { storageService } from '../services/storageService';
 import LetterTemplate from '../models/LetterTemplate';
 import Sequence from '../models/Sequence';
 import PDFDocument from 'pdfkit';
+import puppeteer from 'puppeteer';
+import handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
+import mongoose from 'mongoose';
 
 export const createLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!req.file) {
@@ -269,10 +272,14 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
     let fileIdentifier: string | null = null;
     const tempDir = path.join(__dirname, '..', '..', 'temp_pdf');
     const tempFilePath = path.join(tempDir, `${req.params.id}.pdf`);
+    let browser;
 
     try {
         const schoolId = req.user?.schoolId;
-        const letter = await Letter.findOne({ _id: req.params.id, schoolId });
+        const letter = await Letter.findOne({ _id: req.params.id, schoolId: req.user?.schoolId })
+            .populate('createdBy', 'name')
+            .populate('template', 'body');
+        const approver = req.user;
 
         if (!letter) {
             res.status(404);
@@ -286,23 +293,48 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
             res.status(500);
             throw new Error('Konten surat tidak ditemukan untuk digenerate menjadi PDF.');
         }
+        if (!letter.template || !(letter.template as any).body) {
+            res.status(500);
+            throw new Error('Template surat tidak ditemukan atau body template kosong.');
+        }
 
         const currentYear = new Date().getFullYear();
-        const sequenceNumber = await getNextSequenceValue(schoolId!.toString(), currentYear);
+        const sequenceNumber = await getNextSequenceValue(req.user!.schoolId!.toString(), currentYear);
         const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
 
-        const doc = new PDFDocument({ size: 'A4', margin: 50 });
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        
-        const stream = fs.createWriteStream(tempFilePath);
-        doc.pipe(stream);
-        doc.fontSize(12).text(letter.content, { align: 'justify' });
-        doc.end();
+        const context = {
+            ...Object.fromEntries(letter.formData || new Map()),
+            nama_guru: (letter.createdBy as any)?.name || '',
+            nama_kepsek: approver?.name || '',
+            nomor_surat_final: formattedNomorSurat,
+            tanggal_surat_dibuat: new Date(
+                (letter._id && (letter._id as mongoose.Types.ObjectId).getTimestamp ? (letter._id as mongoose.Types.ObjectId).getTimestamp() : new Date())
+            ).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'}),
+            tanggal_surat_disetujui: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'})
+        };
 
-        await new Promise<void>((resolve, reject) => {
-            stream.on('finish', resolve);
-            stream.on('error', reject);
+        let finalHtml: string;
+        if (typeof letter.template === 'object' && 'body' in letter.template) {
+            const compileTemplate = handlebars.compile(letter.template.body);
+            finalHtml = compileTemplate(context);
+        } else {
+            throw new Error('Template surat tidak valid.');
+        }
+
+        console.log("Meluncurkan Puppeteer untuk membuat PDF...");
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
+
+        const page = await browser.newPage();
+        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+        
+        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+        console.log("PDF berhasil dibuat dalam buffer.");
+
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+        fs.writeFileSync(tempFilePath, pdfBuffer);
 
         const fileStats = fs.statSync(tempFilePath);
         const mockFile: Express.Multer.File = {
@@ -319,7 +351,6 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
         };
 
         fileIdentifier = await storageService.upload(mockFile, 'b2');
-
         fs.unlinkSync(tempFilePath);
 
         letter.nomorSurat = formattedNomorSurat;
@@ -336,7 +367,6 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
         if (fs.existsSync(tempFilePath)) {
             fs.unlinkSync(tempFilePath);
         }
-
         if (fileIdentifier) {
             console.error("Terjadi error setelah upload file. Memulai proses rollback dari B2...");
             try {
@@ -346,8 +376,12 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
                 console.error("GAGAL ROLLBACK: Gagal menghapus file yatim di B2. File Identifier:", fileIdentifier, "Error:", cleanupError);
             }
         }
-        
         next(error);
+    } finally {
+        if (browser) {
+            await browser.close();
+            console.log("Browser Puppeteer ditutup.");
+        }
     }
 };
 
@@ -430,6 +464,7 @@ export const createLetterRequest = async (req: AuthenticatedRequest, res: Respon
             tipeSurat: 'generated',
             content: generatedContent,
             status: 'PENDING',
+            formData: formData,
             template: templateId,
             createdBy: req.user?.id,
             schoolId,
