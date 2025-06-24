@@ -6,31 +6,8 @@ import { getLetterById, getLetterViewUrl, getLetterPreview, approveLetter, rejec
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, Loader2 } from 'lucide-react'; 
 import { Letter } from '@sipas/types';
-
-function getErrorMessage(error: unknown, fallbackMessage: string): string {
-    if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: unknown }).response === 'object' &&
-        (error as { response?: { data?: { message?: unknown } } }).response !== null
-    ) {
-        const response = (error as { response?: { data?: { message?: unknown } } }).response;
-        if (
-            response &&
-            'data' in response &&
-            response.data &&
-            typeof response.data === 'object' &&
-            'message' in response.data &&
-            typeof response.data.message === 'string'
-        ) {
-            return response.data.message;
-        }
-    }
-    return fallbackMessage;
-}
 
 export default function LetterViewPage() {
     const params = useParams();
@@ -44,6 +21,17 @@ export default function LetterViewPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null); 
+
+    function getErrorMessage(err: unknown, fallbackMessage: string): string {
+        if (typeof err === 'object' && err !== null && 'response' in err) {
+            const response = (err as { response?: { data?: { message?: string } } }).response;
+            if (response && response.data && typeof response.data.message === 'string') {
+                return response.data.message;
+            }
+        }
+        return fallbackMessage;
+    }
 
     const fetchLetterData = async () => {
         if (!id) return;
@@ -56,11 +44,10 @@ export default function LetterViewPage() {
             const currentLetter = letterResponse.data;
             setLetter(currentLetter);
 
-            if (currentLetter.status === 'PENDING') {
+            if (currentLetter.status === 'PENDING' || currentLetter.status === 'ARCHIVED') {
                 const previewResponse = await getLetterPreview(id);
                 setPreviewContent(previewResponse.content);
-            } else if (currentLetter.status === 'REJECTED') {
-            } else {
+            } else if (currentLetter.status === 'APPROVED') {
                 const urlResponse = await getLetterViewUrl(id);
                 setPdfUrl(urlResponse.url);
             }
@@ -75,12 +62,20 @@ export default function LetterViewPage() {
     useEffect(() => {
         fetchLetterData();
     }, [id]);
-
+    
     const handleApprove = async () => {
         setIsActionLoading(true);
+        setError(null);
+        setSuccessMessage(null);
         try {
-            await approveLetter(id);
-            fetchLetterData(); 
+            const response = await approveLetter(id);
+            setSuccessMessage(response.message); 
+            setLetter(response.data); 
+            
+            const urlResponse = await getLetterViewUrl(id);
+            setPdfUrl(urlResponse.url);
+            setPreviewContent(null);
+
         } catch (err: unknown) {
             setError(getErrorMessage(err, "Gagal menyetujui surat."));
         } finally {
@@ -90,16 +85,19 @@ export default function LetterViewPage() {
     
     const handleReject = async () => {
         setIsActionLoading(true);
+        setError(null);
+        setSuccessMessage(null);
         try {
-            await rejectLetter(id);
-            fetchLetterData();
+            const response = await rejectLetter(id);
+            setSuccessMessage(response.message);
+            setLetter(response.data);
+            setPreviewContent(null);
         } catch (err: unknown) {
             setError(getErrorMessage(err, "Gagal menolak surat."));
         } finally {
             setIsActionLoading(false);
         }
     };
-
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen">Memuat dokumen...</div>;
@@ -122,7 +120,12 @@ export default function LetterViewPage() {
                                 <X className="mr-2 h-4 w-4"/> Tolak
                             </Button>
                             <Button className="bg-green-600 hover:bg-green-700" onClick={handleApprove} disabled={isActionLoading}>
-                                <Check className="mr-2 h-4 w-4"/> Setuju & Terbitkan
+                                {isActionLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Check className="mr-2 h-4 w-4"/>
+                                )}
+                                {isActionLoading ? 'Memproses PDF...' : 'Setuju & Terbitkan'}
                             </Button>
                         </div>
                     )}
@@ -132,14 +135,15 @@ export default function LetterViewPage() {
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto">
-                {error && <div className='p-4'><Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>}
-                
-                {pdfUrl && <iframe src={pdfUrl} className="w-full h-full border-0" title={letter?.judul} />}
-                
-                {previewContent && <div className="p-8 max-w-4xl mx-auto bg-white my-8 shadow-lg"><pre className="whitespace-pre-wrap font-serif text-gray-800">{previewContent}</pre></div>}
-                
-                {letter?.status === 'REJECTED' && <div className='p-4'><Alert variant="destructive"><AlertTitle>Pengajuan Ditolak</AlertTitle><AlertDescription>Pengajuan surat ini telah ditolak dan tidak dapat diproses lebih lanjut.</AlertDescription></Alert></div>}
+            <main className="flex-1 overflow-y-auto p-4">
+            {successMessage && <Alert className="mb-4"><AlertTitle>Sukses!</AlertTitle><AlertDescription>{successMessage}</AlertDescription></Alert>}
+            {error && <Alert variant="destructive" className="mb-4"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+            
+            {pdfUrl && <iframe src={pdfUrl} className="w-full h-[calc(100vh-150px)] border-0" title={letter?.judul} />}
+            
+            {previewContent && <div className="p-8 max-w-4xl mx-auto bg-white shadow-lg"><pre className="whitespace-pre-wrap font-serif text-gray-800">{previewContent}</pre></div>}
+            
+            {letter?.status === 'REJECTED' && <Alert variant="destructive"><AlertTitle>Pengajuan Ditolak</AlertTitle><AlertDescription>Pengajuan surat ini telah ditolak dan tidak dapat diproses lebih lanjut.</AlertDescription></Alert>}
             </main>
         </div>
     );
