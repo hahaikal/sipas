@@ -1,3 +1,5 @@
+import { Placeholder } from './placeholder';
+
 export interface RequiredInput {
   name: string;
   label: string;
@@ -9,7 +11,7 @@ export interface LetterTemplate {
   name: string;
   description: string;
   body: string;
-  requiredInputs: RequiredInput[];
+  placeholders: Placeholder[];
   schoolId: string;
   createdAt?: string;
   updatedAt?: string;
