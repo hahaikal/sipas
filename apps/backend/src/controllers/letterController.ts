@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import asyncHandler from 'express-async-handler';
 import Letter from '../models/Letter';
 import User from '../models/User';
 import School from '../models/School';
+import Disposition from '../models/Disposition';
 import { AuthenticatedRequest, getSchoolIdFromSubdomain } from '../middleware/authMiddleware';
 import { convertToDate } from '../utils/formatters';
 import { storageService } from '../services/storageService';
@@ -351,7 +353,9 @@ export const approveLetter = async (req: AuthenticatedRequest, res: Response, ne
         };
 
         fileIdentifier = await storageService.upload(mockFile, 'b2');
-        fs.unlinkSync(tempFilePath);
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
 
         letter.nomorSurat = formattedNomorSurat;
         letter.fileUrl = fileIdentifier;
@@ -458,8 +462,13 @@ export const createLetterRequest = async (req: AuthenticatedRequest, res: Respon
             const placeholder = new RegExp(`{${key}}`, 'g');
             generatedContent = generatedContent.replace(placeholder, formData[key]);
         }
-        
+
+        const currentYear = new Date().getFullYear();
+        const sequenceNumber = await getNextSequenceValue(schoolId!.toString(), currentYear);
+        const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
+
         const newLetter = new Letter({
+            nomorSurat: formattedNomorSurat,
             judul: template.name,
             tipeSurat: 'generated',
             content: generatedContent,
@@ -493,3 +502,35 @@ export const getLetterPreview = async (req: AuthenticatedRequest, res: Response,
         next(error);
     }
 };
+
+export const createDisposition = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { toUser, instructions } = req.body;
+    const { id: letterId } = req.params;
+
+    if (!toUser || !instructions) {
+        res.status(400);
+        throw new Error('Penerima dan instruksi harus diisi.');
+    }
+
+    const disposition = new Disposition({
+        letterId,
+        fromUser: req.user?.id,
+        toUser,
+        instructions,
+        schoolId: req.user?.schoolId,
+    });
+
+    const createdDisposition = await disposition.save();
+    res.status(201).json({ message: 'Disposisi berhasil dikirim.', data: createdDisposition });
+});
+
+export const getDispositionsForLetter = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { id: letterId } = req.params;
+
+    const dispositions = await Disposition.find({ letterId })
+        .populate('fromUser', 'name role')
+        .populate('toUser', 'name role')
+        .sort({ createdAt: 'asc' });
+
+    res.status(200).json({ data: dispositions });
+});
