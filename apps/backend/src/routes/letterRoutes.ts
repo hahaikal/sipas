@@ -18,23 +18,26 @@ router.get('/dashboard/stats', protect, asyncHandler(letterController.getDashboa
 
 router.post('/generate-request', protect, asyncHandler(letterController.createLetterRequest));
 
-router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.approveLetter));
-router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
-router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
-
 router.route('/')
   .post(protect, upload.single('file'), asyncHandler(letterController.createLetter));
 
 router.route('/list')
   .post(protect, asyncHandler(letterController.getAllLetters));
 
-router.post('/:id/view', protect, letterController.getLetterViewUrl);
-
 router.route('/:id')
   .all(protect)
   .post(letterController.getLetterById)
   .put(letterController.updateLetter)
   .delete(letterController.deleteLetter);
+
+router.route('/:id/dispositions')
+  .post(protect, asyncHandler(letterController.createDisposition))
+  .get(protect, asyncHandler(letterController.getDispositionsForLetter));
+
+router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.approveLetter));
+router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
+router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
+router.post('/:id/view', protect, letterController.getLetterViewUrl);
 
 router.get('/by-nomor/:nomor', protect, letterController.getLetterByNumber);
 

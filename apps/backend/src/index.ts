@@ -15,6 +15,7 @@ import achievementRoutes from './routes/achievementRoutes';
 import publicRoutes from './routes/publicRoutes'; 
 import templateRoutes from './routes/templateRoutes';
 import placeholderRoutes from './routes/placeholderRoutes';
+import dispositionRoutes from './routes/dispositionRoutes';
 import { redisClient, connectRedis } from './config/redisClient';
 import './models/User';
 import './models/Letter';
@@ -44,6 +45,7 @@ app.use('/api/achievements', achievementRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/templates', templateRoutes); 
 app.use('/api/placeholders', placeholderRoutes);
+app.use('/api/dispositions', dispositionRoutes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
