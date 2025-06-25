@@ -1,44 +1,51 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Control, FieldValues, ControllerRenderProps } from 'react-hook-form';
 import { useParams, useRouter } from 'next/navigation';
-import { getTemplateById, RequiredInput } from '@/services/templateService';
+import { LetterTemplate, RequiredInput } from '@sipas/types'; 
+import { getTemplateById } from '@/services/templateService';
 import { generateLetterFromTemplate } from '@/services/letterService';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { LetterTemplate } from '@sipas/types';
-
-import { Control, FieldValues } from 'react-hook-form';
 
 const renderFormField = (control: Control<FieldValues>, input: RequiredInput) => {
+    const renderInput = (field: ControllerRenderProps<FieldValues, string>) => {
+        switch (input.type) {
+            case 'textarea':
+                return <Textarea {...field} />;
+            case 'date':
+                return <Input type="date" {...field} />;
+            case 'number':
+                return <Input type="number" {...field} />;
+            case 'text':
+            default:
+                return <Input type="text" {...field} />;
+        }
+    };
+
     return (
         <FormField
             key={input.name}
             control={control}
             name={input.name}
+            rules={{ required: `${input.label} wajib diisi` }}
             render={({ field }) => (
                 <FormItem>
                     <FormLabel>{input.label}</FormLabel>
                     <FormControl>
-                        {
-                            {
-                                'text': <Input {...field} />,
-                                'textarea': <Textarea {...field} />,
-                                'date': <Input type="date" {...field} />,
-                                'number': <Input type="number" {...field} />
-                            }[input.type]
-                        }
+                        {renderInput(field)}
                     </FormControl>
                     <FormMessage />
                 </FormItem>
             )}
         />
-    )
+    );
 };
 
 export default function GenerateLetterPage() {
@@ -51,30 +58,24 @@ export default function GenerateLetterPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    // Initialize form with empty defaultValues
-    const form = useForm({
-        defaultValues: {}
-    });
+    const form = useForm();
 
-    // Reset form defaultValues when template is loaded
-    useEffect(() => {
+useEffect(() => {
         if (templateId) {
             getTemplateById(templateId)
                 .then(response => {
-                    setTemplate(response.data);
-                    // Prepare default values for form inputs
-                    const defaults: Record<string, string> = {};
-                    response.data.requiredInputs.forEach((input: { name: string }) => {
-                        defaults[input.name] = '';
-                    });
-                    form.reset(defaults);
+                    if (response && response.data) {
+                        setTemplate(response.data);
+                    } else {
+                        setError("Template data tidak ditemukan.");
+                    }
                 })
                 .catch(() => setError("Gagal memuat template atau template tidak ditemukan."))
                 .finally(() => setIsLoading(false));
         }
-    }, [templateId, form]);
+    }, [templateId]);
     
-    const onSubmit = async (formData: Record<string, unknown>) => {
+    const onSubmit = async (formData: FieldValues) => {
         setIsLoading(true);
         setError(null);
         setSuccess(null);
@@ -82,17 +83,11 @@ export default function GenerateLetterPage() {
         try {
             const response = await generateLetterFromTemplate({ templateId, formData });
             setSuccess(response.message + ". Anda akan diarahkan kembali.");
-            setTimeout(() => router.push('/dashboard'), 2000);
+            setTimeout(() => router.push('/dashboard/arsip'), 2000);
         } catch (err: unknown) {
-            type ApiError = {
-                response?: {
-                    data?: {
-                        message?: string;
-                    };
-                };
-            };
-            if (typeof err === "object" && err !== null && "response" in err && typeof (err as ApiError).response === "object") {
-                setError((err as ApiError).response?.data?.message || "Gagal mengajukan surat.");
+            if (typeof err === 'object' && err !== null && 'response' in err) {
+                // @ts-expect-error TS unable to infer error response type
+                setError(err.response?.data?.message || "Gagal mengajukan surat.");
             } else {
                 setError("Gagal mengajukan surat.");
             }
@@ -114,12 +109,12 @@ export default function GenerateLetterPage() {
                     <CardDescription>{template?.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-                    {success && <Alert><AlertTitle>Sukses</AlertTitle><AlertDescription>{success}</AlertDescription></Alert>}
+                    {error && <Alert variant="destructive" className="mb-4"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                    {success && <Alert className="mb-4"><AlertTitle>Sukses</AlertTitle><AlertDescription>{success}</AlertDescription></Alert>}
 
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-                            {template?.requiredInputs.map(input => renderFormField(form.control, input))}
+                            {Array.isArray(template?.requiredInputs) ? template.requiredInputs.map(input => renderFormField(form.control, input)) : null}
                             <div className="flex justify-end pt-4">
                                 <Button type="submit" disabled={isLoading}>
                                     {isLoading ? 'Mengajukan...' : 'Ajukan Surat'}

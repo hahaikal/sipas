@@ -29,7 +29,6 @@ interface TemplateFormProps {
   isLoading?: boolean;
 }
 
-// --- PERBAIKAN: Definisikan tipe untuk item menu TinyMCE ---
 interface TinyMCEMenuItem {
   type: 'menuitem';
   text: string;
@@ -49,17 +48,58 @@ export default function TemplateForm({ onSubmit, initialData, isLoading = false 
     },
   });
 
+  const nameRef = useRef<HTMLDivElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     getPlaceholders().then(setPlaceholders).catch(console.error);
   }, []);
 
+  useEffect(() => {
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      if (errors.name) {
+        nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errors.description) {
+        descriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (errors.body) {
+        bodyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [form.formState.errors]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField name="name" control={form.control} render={({ field }) => (<FormItem><FormLabel>Nama Template</FormLabel><FormControl><Input {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>)} />
-        <FormField name="description" control={form.control} render={({ field }) => (<FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Textarea {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>)} />
-        
-        <div>
+        <FormField
+          name="name"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem ref={nameRef}>
+              <FormLabel>Nama Template</FormLabel>
+              <FormControl>
+                <Input {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          name="description"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem ref={descriptionRef}>
+              <FormLabel>Deskripsi</FormLabel>
+              <FormControl>
+                <Textarea {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div ref={bodyRef}>
           <FormLabel>Isi Surat</FormLabel>
           <Controller
             name="body"
@@ -67,39 +107,54 @@ export default function TemplateForm({ onSubmit, initialData, isLoading = false 
             render={({ field }) => (
               <Editor
                 apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                onInit={(_evt, editor) => editorRef.current = editor}
+                onInit={(_evt, editor) => (editorRef.current = editor)}
                 value={field.value}
                 onEditorChange={field.onChange}
                 init={{
                   height: 500,
                   menubar: false,
                   plugins: [
-                    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 
-                    'preview', 'anchor', 'searchreplace', 'visualblocks', 'code', 
-                    'fullscreen', 'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                    'advlist',
+                    'autolink',
+                    'lists',
+                    'link',
+                    'image',
+                    'charmap',
+                    'preview',
+                    'anchor',
+                    'searchreplace',
+                    'visualblocks',
+                    'code',
+                    'fullscreen',
+                    'insertdatetime',
+                    'media',
+                    'table',
+                    'help',
+                    'wordcount',
                   ],
-                  toolbar: 'undo redo | blocks | ' +
-                           'bold italic forecolor | alignleft aligncenter ' +
-                           'alignright alignjustify | bullist numlist outdent indent | ' +
-                           'removeformat | placeholderButton | help',
-                  
+                  toolbar:
+                    'undo redo | blocks | ' +
+                    'bold italic forecolor | alignleft aligncenter ' +
+                    'alignright alignjustify | bullist numlist outdent indent | ' +
+                    'removeformat | placeholderButton | help',
+
                   setup: (editor: TinyMCEEditor) => {
                     editor.ui.registry.addMenuButton('placeholderButton', {
                       text: 'Sisipkan Placeholder',
                       // --- PERBAIKAN: Gunakan tipe TinyMCEMenuItem[] ---
                       fetch: (callback: (items: TinyMCEMenuItem[]) => void) => {
-                        const items: TinyMCEMenuItem[] = placeholders.map(p => ({
+                        const items: TinyMCEMenuItem[] = placeholders.map((p) => ({
                           type: 'menuitem',
                           text: p.description,
                           onAction: () => {
                             editor.insertContent(p.key);
-                          }
+                          },
                         }));
                         callback(items);
-                      }
+                      },
                     });
                   },
-                  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+                  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
                 }}
               />
             )}
@@ -108,7 +163,9 @@ export default function TemplateForm({ onSubmit, initialData, isLoading = false 
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="submit" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Template'}</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Menyimpan...' : 'Simpan Template'}
+          </Button>
         </div>
       </form>
     </Form>

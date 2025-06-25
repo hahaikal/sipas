@@ -12,6 +12,7 @@ export interface LetterTemplate {
   description: string;
   body: string;
   placeholders: Placeholder[];
+  requiredInputs: RequiredInput[];
   schoolId: string;
   createdAt?: string;
   updatedAt?: string;

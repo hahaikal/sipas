@@ -20,7 +20,7 @@ export interface UpdateLetterData {
   judul?: string;
   tanggalSurat?: string;
   kategori?: string;
-  tipeSurat?: 'masuk' | 'keluar';
+  tipeSurat?: 'masuk' | 'keluar' | 'generated';
 }
 
 export interface GenerateLetterPayload {
@@ -106,4 +106,5 @@ export const getLetterPreview = async (id: string): Promise<{ content: string }>
     const response = await api.get(`/letters/${id}/preview`);
     return response.data;
 };
+
 

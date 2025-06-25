@@ -2,12 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getLetterById, getLetterViewUrl, getLetterPreview, approveLetter, rejectLetter } from '@/services/letterService';
 import { useAuth } from '@/contexts/AuthContext';
+import { Letter } from '@sipas/types';
+import { Disposition } from '@sipas/types';
+import { getLetterById, getLetterViewUrl, getLetterPreview, approveLetter, rejectLetter } from '@/services/letterService';
+import { createDisposition, getDispositionsForLetter, CreateDispositionData } from '@/services/dispositionService';
+
+import { ArrowLeft, Check, X, Loader2, MessageSquarePlus } from 'lucide-react'; 
+import DispositionForm from '@/components/forms/DispositionForm';
+import DispositionTimeline from '@/components/disposition/DispositionTimeline';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, Check, X, Loader2 } from 'lucide-react'; 
-import { Letter } from '@sipas/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LetterViewPage() {
     const params = useParams();
@@ -21,7 +28,9 @@ export default function LetterViewPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null); 
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [dispositions, setDispositions] = useState<Disposition[]>([]);
+    const [isDispositionFormOpen, setIsDispositionFormOpen] = useState(false);
 
     function getErrorMessage(err: unknown, fallbackMessage: string): string {
         if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -43,6 +52,7 @@ export default function LetterViewPage() {
             const letterResponse = await getLetterById(id);
             const currentLetter = letterResponse.data;
             setLetter(currentLetter);
+            getDispositionsForLetter(id).then(res => setDispositions(res.data)).catch(console.error);
 
             if (currentLetter.status === 'PENDING' || currentLetter.status === 'ARCHIVED') {
                 const previewResponse = await getLetterPreview(id);
@@ -99,6 +109,17 @@ export default function LetterViewPage() {
         }
     };
 
+    const handleDispositionSubmit = async (data: CreateDispositionData) => {
+        try {
+            await createDisposition(id, data);
+            setIsDispositionFormOpen(false);
+            getDispositionsForLetter(id).then(res => setDispositions(res.data));
+        } catch (error) {
+            console.error(error);
+            alert('Gagal membuat disposisi.');
+        }
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen">Memuat dokumen...</div>;
     }
@@ -116,6 +137,9 @@ export default function LetterViewPage() {
                 <div className='flex items-center gap-2'>
                     {user?.role === 'kepala sekolah' && needsApproval && (
                         <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setIsDispositionFormOpen(true)}>
+                                <MessageSquarePlus className="mr-2 h-4 w-4" /> Buat Disposisi
+                            </Button>
                             <Button variant="destructive" onClick={handleReject} disabled={isActionLoading}>
                                 <X className="mr-2 h-4 w-4"/> Tolak
                             </Button>
@@ -136,14 +160,28 @@ export default function LetterViewPage() {
             </header>
 
             <main className="flex-1 overflow-y-auto p-4">
-            {successMessage && <Alert className="mb-4"><AlertTitle>Sukses!</AlertTitle><AlertDescription>{successMessage}</AlertDescription></Alert>}
-            {error && <Alert variant="destructive" className="mb-4"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-            
-            {pdfUrl && <iframe src={pdfUrl} className="w-full h-[calc(100vh-150px)] border-0" title={letter?.judul} />}
-            
-            {previewContent && <div className="p-8 max-w-4xl mx-auto bg-white shadow-lg"><pre className="whitespace-pre-wrap font-serif text-gray-800">{previewContent}</pre></div>}
-            
-            {letter?.status === 'REJECTED' && <Alert variant="destructive"><AlertTitle>Pengajuan Ditolak</AlertTitle><AlertDescription>Pengajuan surat ini telah ditolak dan tidak dapat diproses lebih lanjut.</AlertDescription></Alert>}
+                {successMessage && <Alert className="mb-4"><AlertTitle>Sukses!</AlertTitle><AlertDescription>{successMessage}</AlertDescription></Alert>}
+                {error && <Alert variant="destructive" className="mb-4"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+                
+                {pdfUrl && <iframe src={pdfUrl} className="w-full h-[calc(100vh-150px)] border-0" title={letter?.judul} />}
+                
+                {previewContent && <div className="p-8 max-w-4xl mx-auto bg-white shadow-lg"><pre className="whitespace-pre-wrap font-serif text-gray-800">{previewContent}</pre></div>}
+                
+                {letter?.status === 'REJECTED' && <Alert variant="destructive"><AlertTitle>Pengajuan Ditolak</AlertTitle><AlertDescription>Pengajuan surat ini telah ditolak dan tidak dapat diproses lebih lanjut.</AlertDescription></Alert>}
+
+                <Card>
+                    <CardHeader><CardTitle>Riwayat Disposisi</CardTitle></CardHeader>
+                    <CardContent>
+                        <DispositionTimeline dispositions={dispositions} />
+                    </CardContent>
+                </Card>
+
+                <Dialog open={isDispositionFormOpen} onOpenChange={setIsDispositionFormOpen}>
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>Buat Disposisi Baru</DialogTitle></DialogHeader>
+                        <DispositionForm onSubmit={handleDispositionSubmit} />
+                    </DialogContent>
+                </Dialog>
             </main>
         </div>
     );

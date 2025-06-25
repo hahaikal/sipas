@@ -141,7 +141,7 @@ export default function ManageTemplatesPage() {
       </Card>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingTemplate ? 'Edit' : 'Buat'} Template Surat</DialogTitle></DialogHeader>
           <TemplateForm 
             onSubmit={handleFormSubmit}
