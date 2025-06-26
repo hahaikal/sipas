@@ -1,11 +1,12 @@
 import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
+import { redisClient, connectRedis } from './config/redisClient';
+
 import authRoutes from './routes/authRoutes';
 import letterRoutes from './routes/letterRoutes';
 import userRoutes from './routes/userRoutes'; 
@@ -16,7 +17,7 @@ import publicRoutes from './routes/publicRoutes';
 import templateRoutes from './routes/templateRoutes';
 import placeholderRoutes from './routes/placeholderRoutes';
 import dispositionRoutes from './routes/dispositionRoutes';
-import { redisClient, connectRedis } from './config/redisClient';
+import schoolRoutes from './routes/schoolRoutes';
 import './models/User';
 import './models/Letter';
 import './models/News';
@@ -40,6 +41,7 @@ app.use('/api/letters', letterRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/schools', schoolRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/public', publicRoutes);
