@@ -4,3 +4,4 @@ export * from './placeholder';
 export * from './user';
 export * from './letter'
 export * from './disposition';
+export * from './School';
