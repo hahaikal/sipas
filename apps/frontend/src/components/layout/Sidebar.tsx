@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Upload, Archive, User, Newspaper, GalleryHorizontal, Award, FileText, Building2, FileCog } from 'lucide-react';
+import { Home, Upload, Archive, User, Newspaper, GalleryHorizontal, Award, FileText, Building2, Settings, FileCog } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -15,11 +15,12 @@ const Sidebar = () => {
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/arsip", label: "Daftar Arsip", icon: Archive },
     { href: "/dashboard/upload", label: "Upload Surat", icon: Upload },
-    { href: "/dashboard/ajukan-surat", label: "Pembuatan Surat", icon: FileText },
+    { href: "#", label: "Pembuatan Surat", icon: FileText },
   ];
 
   const adminLinks = [
     { href: "/dashboard/user", label: "Manajemen Pengguna", icon: User },
+    { href: "/dashboard/settings", label: "Pengaturan Sekolah", icon: Settings },
     { href: "/dashboard/templates", label: "Manajemen Template", icon: FileCog },
   ];
 
@@ -42,7 +43,7 @@ const Sidebar = () => {
             href={link.href}
             className={cn(
               "flex items-center gap-3 p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-primary transition-colors",
-              pathname === link.href && "bg-primary/10 text-primary font-semibold"
+              pathname.startsWith(link.href) && link.href !== '/dashboard' || pathname === link.href ? "bg-primary/10 text-primary font-semibold" : ""
             )}
           >
             <link.icon className="w-5 h-5" />
@@ -50,7 +51,7 @@ const Sidebar = () => {
           </Link>
         ))}
         
-        {(user?.role === 'admin' || user?.role === 'kepala sekolah') && (
+        {user?.role === 'admin' && (
           <>
             <div className="mt-4 mb-2 px-2 text-xs font-semibold text-gray-400 uppercase">Admin Area</div>
             {adminLinks.map(link => (
@@ -59,7 +60,7 @@ const Sidebar = () => {
                 href={link.href}
                 className={cn(
                   "flex items-center gap-3 p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-primary transition-colors",
-                  pathname === link.href && "bg-primary/10 text-primary font-semibold"
+                  pathname.startsWith(link.href) && "bg-primary/10 text-primary font-semibold"
                 )}
               >
                 <link.icon className="w-5 h-5" />
@@ -78,7 +79,7 @@ const Sidebar = () => {
                     {contentLinks.map(link => (
                        <Link key={link.href} href={link.href} className={cn(
                          "flex items-center gap-3 p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-primary transition-colors",
-                         pathname === link.href && "bg-primary/10 text-primary font-semibold"
+                         pathname.startsWith(link.href) && "bg-primary/10 text-primary font-semibold"
                        )}>
                           <link.icon className="w-5 h-5" />
                           <span>{link.label}</span>

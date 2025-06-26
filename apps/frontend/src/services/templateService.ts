@@ -1,10 +1,7 @@
 import api from '@/lib/api';
-import { LetterTemplate } from '@sipas/types';
+import { LetterTemplate, Placeholder } from '@sipas/types';
 
-export type CreateTemplateData = Omit<LetterTemplate, '_id' | 'schoolId' | 'createdAt' | 'updatedAt'>;
-export type UpdateTemplateData = Partial<CreateTemplateData>;
-
-export const getTemplates = async (): Promise<{ data: LetterTemplate[] }> => {
+export const getAllTemplates = async (): Promise<{ data: LetterTemplate[] }> => {
     const response = await api.get('/templates');
     return response.data;
 };
@@ -14,12 +11,12 @@ export const getTemplateById = async (id: string): Promise<{ data: LetterTemplat
     return response.data;
 };
 
-export const createTemplate = async (data: CreateTemplateData): Promise<{ data: LetterTemplate }> => {
+export const createTemplate = async (data: Partial<LetterTemplate>): Promise<{ data: LetterTemplate }> => {
     const response = await api.post('/templates', data);
     return response.data;
 };
 
-export const updateTemplate = async (id: string, data: UpdateTemplateData): Promise<{ data: LetterTemplate }> => {
+export const updateTemplate = async (id: string, data: Partial<LetterTemplate>): Promise<{ data: LetterTemplate }> => {
     const response = await api.put(`/templates/${id}`, data);
     return response.data;
 };
@@ -28,3 +25,10 @@ export const deleteTemplate = async (id: string): Promise<{ message: string }> =
     const response = await api.delete(`/templates/${id}`);
     return response.data;
 };
+
+export const getPlaceholders = async (): Promise<Placeholder[]> => {
+    const response = await api.get('/placeholders');
+    return response.data;
+};
+
+export type { LetterTemplate, Placeholder };

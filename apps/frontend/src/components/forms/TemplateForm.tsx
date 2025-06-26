@@ -1,173 +1,125 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Editor } from '@tinymce/tinymce-react';
-import type { Editor as TinyMCEEditor } from 'tinymce';
-
-import { getPlaceholders } from '@/services/placeholderService';
-import { Placeholder, LetterTemplate } from '@sipas/types';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '../ui/textarea';
-
-const templateFormSchema = z.object({
-  name: z.string().min(3, 'Nama template wajib diisi.'),
-  description: z.string().optional(),
-  body: z.string().min(10, 'Isi template tidak boleh kosong.'),
-});
-
-type TemplateFormData = z.infer<typeof templateFormSchema>;
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import type { Editor as TinyMCEEditor, Ui } from 'tinymce/tinymce';
+import { getSchoolSettings } from '@/services/schoolService';
+import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeholder } from '@/services/templateService';
 
 interface TemplateFormProps {
-  onSubmit: (data: TemplateFormData) => void;
-  initialData?: LetterTemplate | null;
-  isLoading?: boolean;
+    initialData?: LetterTemplate | null;
+    onSuccess: () => void;
 }
 
-interface TinyMCEMenuItem {
-  type: 'menuitem';
-  text: string;
-  onAction: () => void;
-}
+export default function TemplateForm({ initialData, onSuccess }: TemplateFormProps) {
+    const { register, handleSubmit, control, setValue } = useForm<LetterTemplate>({
+        defaultValues: initialData || { name: '', description: '', body: '' }
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const [letterhead, setLetterhead] = useState({ logoUrl: '', detail: '' });
+    const editorRef = useRef<TinyMCEEditor | null>(null);
 
-export default function TemplateForm({ onSubmit, initialData, isLoading = false }: TemplateFormProps) {
-  const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
-  const editorRef = useRef<TinyMCEEditor | null>(null);
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const settingsRes = await getSchoolSettings();
+                setLetterhead({
+                    logoUrl: settingsRes.data.logoUrl ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${settingsRes.data.logoUrl}` : '',
+                    detail: settingsRes.data.letterheadDetail || ''
+                });
+            } catch (error) {
+                console.error("Failed to fetch dependencies", error);
+            }
+        };
+        fetchData();
 
-  const form = useForm<TemplateFormData>({
-    resolver: zodResolver(templateFormSchema),
-    defaultValues: {
-      name: initialData?.name || '',
-      description: initialData?.description || '',
-      body: initialData?.body || '',
-    },
-  });
+        if (initialData) {
+            setValue('name', initialData.name);
+            setValue('description', initialData.description);
+            setValue('body', initialData.body);
+        }
+    }, [initialData, setValue]);
 
-  const nameRef = useRef<HTMLDivElement>(null);
-  const descriptionRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
+    const onSubmit = async (data: LetterTemplate) => {
+        setIsLoading(true);
+        try {
+            if (initialData?._id) {
+                await updateTemplate(initialData._id, data);
+            } else {
+                await createTemplate(data);
+            }
+            onSuccess();
+        } catch {
+            alert('Gagal menyimpan template.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  useEffect(() => {
-    getPlaceholders().then(setPlaceholders).catch(console.error);
-  }, []);
+    return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="name">Nama Template</Label>
+                <Input id="name" {...register('name', { required: true })} disabled={isLoading} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="description">Deskripsi</Label>
+                <Textarea id="description" {...register('description')} disabled={isLoading} />
+            </div>
 
-  useEffect(() => {
-    const errors = form.formState.errors;
-    if (Object.keys(errors).length > 0) {
-      if (errors.name) {
-        nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (errors.description) {
-        descriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (errors.body) {
-        bodyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [form.formState.errors]);
+            <div className="space-y-2">
+                <Label>Preview Kop Surat (Read-only)</Label>
+                <div className="border rounded-md p-4 bg-gray-50 flex items-start gap-4">
+                    {letterhead.logoUrl && <img src={letterhead.logoUrl} alt="Logo" className="h-20" />}
+                    <div dangerouslySetInnerHTML={{ __html: letterhead.detail }} />
+                </div>
+            </div>
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          name="name"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem ref={nameRef}>
-              <FormLabel>Nama Template</FormLabel>
-              <FormControl>
-                <Input {...field} disabled={isLoading} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="description"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem ref={descriptionRef}>
-              <FormLabel>Deskripsi</FormLabel>
-              <FormControl>
-                <Textarea {...field} disabled={isLoading} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div ref={bodyRef}>
-          <FormLabel>Isi Surat</FormLabel>
-          <Controller
-            name="body"
-            control={form.control}
-            render={({ field }) => (
-              <Editor
-                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                onInit={(_evt, editor) => (editorRef.current = editor)}
-                value={field.value}
-                onEditorChange={field.onChange}
-                init={{
-                  height: 500,
-                  menubar: false,
-                  plugins: [
-                    'advlist',
-                    'autolink',
-                    'lists',
-                    'link',
-                    'image',
-                    'charmap',
-                    'preview',
-                    'anchor',
-                    'searchreplace',
-                    'visualblocks',
-                    'code',
-                    'fullscreen',
-                    'insertdatetime',
-                    'media',
-                    'table',
-                    'help',
-                    'wordcount',
-                  ],
-                  toolbar:
-                    'undo redo | blocks | ' +
-                    'bold italic forecolor | alignleft aligncenter ' +
-                    'alignright alignjustify | bullist numlist outdent indent | ' +
-                    'removeformat | placeholderButton | help',
-
-                  setup: (editor: TinyMCEEditor) => {
-                    editor.ui.registry.addMenuButton('placeholderButton', {
-                      text: 'Sisipkan Placeholder',
-                      // --- PERBAIKAN: Gunakan tipe TinyMCEMenuItem[] ---
-                      fetch: (callback: (items: TinyMCEMenuItem[]) => void) => {
-                        const items: TinyMCEMenuItem[] = placeholders.map((p) => ({
-                          type: 'menuitem',
-                          text: p.description,
-                          onAction: () => {
-                            editor.insertContent(p.key);
-                          },
-                        }));
-                        callback(items);
-                      },
-                    });
-                  },
-                  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                }}
-              />
-            )}
-          />
-          <FormMessage>{form.formState.errors.body?.message}</FormMessage>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Menyimpan...' : 'Simpan Template'}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  );
+            <div className="space-y-2">
+                <Label htmlFor="body">Isi Surat</Label>
+                <Controller
+                    name="body"
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                        <Editor
+                            id='body'
+                            apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                            onInit={(_evt, editor) => editorRef.current = editor}
+                            initialValue={value}
+                            onEditorChange={(content) => onChange(content)}
+                            init={{
+                                height: 500,
+                                menubar: true,
+                                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders',
+                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                setup: (editor: TinyMCEEditor) => {
+                                    editor.ui.registry.addMenuButton('placeholders', {
+                                        text: 'Sisipkan Placeholder',
+                                        fetch: async (callback) => {
+                                            const placeholders = await getPlaceholders();
+                                            const items: Ui.Menu.MenuItemSpec[] = placeholders.map((p: Placeholder) => ({
+                                                type: 'menuitem',
+                                                text: p.text,
+                                                onAction: (_api) => editor.insertContent(p.value),
+                                            }));
+                                            callback(items);
+                                        },
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+                />
+            </div>
+            <div className="flex justify-end">
+                <Button type="submit" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Template'}</Button>
+            </div>
+        </form>
+    );
 }

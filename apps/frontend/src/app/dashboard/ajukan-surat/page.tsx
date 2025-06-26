@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getTemplates } from '@/services/templateService';
+import { getAllTemplates } from '@/services/templateService';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LetterTemplate } from '@sipas/types';
 
@@ -13,7 +13,7 @@ export default function AjukanSuratPage() {
     useEffect(() => {
         const fetchTemplates = async () => {
             try {
-                const response = await getTemplates();
+                const response = await getAllTemplates();
                 setTemplates(response.data);
             } catch (error) {
                 console.error("Gagal memuat template", error);
