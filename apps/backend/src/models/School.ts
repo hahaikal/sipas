@@ -6,6 +6,8 @@ export interface ISchool extends Document {
   phone?: string;
   subdomain?: string;
   status: 'active' | 'inactive' | 'suspended';
+  logoUrl?: string;
+  letterheadDetail?: string;
 }
 
 const schoolSchema = new Schema<ISchool>({
@@ -29,6 +31,12 @@ const schoolSchema = new Schema<ISchool>({
     type: String,
     enum: ['active', 'inactive', 'suspended'],
     default: 'active',
+  },
+  logoUrl: {
+    type: String,
+  },
+  letterheadDetail: {
+    type: String,
   },
 }, { timestamps: true });
 
