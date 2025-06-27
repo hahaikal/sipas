@@ -1,53 +1,36 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-interface IFormData {
-  [key: string]: any;
-}
-
 interface ILetter {
-  nomorSurat: string;
   judul: string;
-  tanggalSurat: Date;
   kategori: string;
   tipeSurat: 'masuk' | 'keluar';
-  fileUrl?: string;
   createdBy: Types.ObjectId;
   schoolId: Types.ObjectId;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  templateId?: Types.ObjectId;
-  content?: string; // Add this line
-  formData?: string;
-  approvedBy?: Types.ObjectId;
-  approvedAt?: Date; 
+  nomorSurat?: string;
+  tanggalSurat?: Date;
+  fileUrl?: string; 
+  approvedBy?: Types.ObjectId; 
+  approvedAt?: Date;
+  templateRef: Types.ObjectId;
+  templateData: Map<string, string>;
 }
 
 export interface ILetterDocument extends ILetter, Document {}
 
 const letterSchema = new Schema<ILetterDocument>({
-  nomorSurat: {
-    type: String,
-    required: true,
-    // unique: true,
-  },
   judul: {
     type: String,
     required: true,
   },
-  tanggalSurat: {
-    type: Date,
-    required: true,
-  },
   kategori: {
     type: String,
-    required: true,
+    // required: true,
   },
   tipeSurat: {
     type: String,
     enum: ['masuk', 'keluar'],
-    required: true,
-  },
-  fileUrl: {
-    type: String,
+    default: 'keluar',
   },
   createdBy: {
     type: Schema.Types.ObjectId,
@@ -65,22 +48,20 @@ const letterSchema = new Schema<ILetterDocument>({
     enum: ['PENDING', 'APPROVED', 'REJECTED'],
     default: 'PENDING',
   },
-  templateId: {
+  nomorSurat: { type: String },
+  tanggalSurat: { type: Date },
+  fileUrl: { type: String },
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
+  templateRef: {
     type: Schema.Types.ObjectId,
     ref: 'LetterTemplate',
+    required: true,
   },
-  content: { // Add this block
-    type: String,
-  },
-  formData: {
-    type: String,
-  },
-  approvedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  approvedAt: {
-    type: Date,
+  templateData: {
+    type: Map,
+    of: String,
+    required: true,
   },
 }, { timestamps: true });
 
