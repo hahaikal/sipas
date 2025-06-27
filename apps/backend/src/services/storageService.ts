@@ -66,7 +66,7 @@ class BackblazeB2Provider implements IStorageProvider {
 
     const { uploadUrl, authorizationToken: uploadAuthToken } = getUploadUrlResponse.data;
 
-    const fileData = fs.readFileSync(file.path);
+    const fileData = file.buffer ?? fs.readFileSync(file.path);
     const sha1 = crypto.createHash('sha1').update(fileData).digest('hex');
     const fileName = `letters/${Date.now()}-${encodeURIComponent(path.basename(file.originalname))}`;
 
@@ -80,7 +80,9 @@ class BackblazeB2Provider implements IStorageProvider {
       },
     });
 
-    fs.unlinkSync(file.path);
+    if (file.path) {
+      fs.unlinkSync(file.path);
+    }
 
     const { fileId, fileName: returnedFileName } = uploadResponse.data;
     return JSON.stringify({ fileId, fileName: returnedFileName });
@@ -159,10 +161,15 @@ class BackblazeB2Provider implements IStorageProvider {
 
 class CloudinaryProvider implements IStorageProvider {
   async upload(file: Express.Multer.File): Promise<string> {
-    const result = await cloudinary.uploader.upload(file.path, {
+    const resourceToUpload = file.buffer
+      ? `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+      : file.path;
+    const result = await cloudinary.uploader.upload(resourceToUpload, {
         folder: "sipas_gallery"
     });
-    fs.unlinkSync(file.path);
+    if (file.path) {
+      fs.unlinkSync(file.path);
+    }
     return result.public_id;
   }
 

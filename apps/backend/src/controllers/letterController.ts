@@ -270,124 +270,100 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
   }
 };
 
-export const approveLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+/**
+ * @desc    Menyetujui surat, men-generate PDF dari template, dan menyimpan hasilnya.
+ * @route   POST /api/letters/:id/approve
+ * @access  Private (Kepala Sekolah, Admin)
+ */
+export const generateAndApproveLetter = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const letterId = req.params.id;
+    const approver = req.user;
+
     let fileIdentifier: string | null = null;
-    const tempDir = path.join(__dirname, '..', '..', 'temp_pdf');
-    const tempFilePath = path.join(tempDir, `${req.params.id}.pdf`);
-    let browser;
 
     try {
-        const schoolId = req.user?.schoolId;
-        const letter = await Letter.findOne({ _id: req.params.id, schoolId: req.user?.schoolId })
-            .populate('createdBy', 'name')
-            .populate('template', 'body');
-        const approver = req.user;
-
+        const letter = await Letter.findById(letterId).populate('createdBy');
         if (!letter) {
             res.status(404);
-            throw new Error('Pengajuan surat tidak ditemukan');
+            throw new Error('Surat yang akan disetujui tidak ditemukan.');
         }
-        if (letter.status !== 'PENDING') {
-            res.status(400);
-            throw new Error(`Surat ini tidak dalam status PENDING (Status saat ini: ${letter.status})`);
-        }
-        if (!letter.content) {
-            res.status(500);
-            throw new Error('Konten surat tidak ditemukan untuk digenerate menjadi PDF.');
-        }
-        if (!letter.template || !(letter.template as any).body) {
-            res.status(500);
-            throw new Error('Template surat tidak ditemukan atau body template kosong.');
+        
+        if (!letter.templateId) {
+             res.status(400);
+             throw new Error('Surat ini tidak terhubung dengan template manapun.');
         }
 
-        const currentYear = new Date().getFullYear();
-        const sequenceNumber = await getNextSequenceValue(req.user!.schoolId!.toString(), currentYear);
-        const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
+        const template = await LetterTemplate.findById(letter.templateId);
+        if (!template) {
+            res.status(404);
+            throw new Error('Template untuk surat ini tidak ditemukan.');
+        }
 
-        const context = {
-            ...Object.fromEntries(letter.formData || new Map()),
-            nama_guru: (letter.createdBy as any)?.name || '',
-            nama_kepsek: approver?.name || '',
-            nomor_surat_final: formattedNomorSurat,
-            tanggal_surat_dibuat: new Date(
-                (letter._id && (letter._id as mongoose.Types.ObjectId).getTimestamp ? (letter._id as mongoose.Types.ObjectId).getTimestamp() : new Date())
-            ).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'}),
-            tanggal_surat_disetujui: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'})
+        const school = await School.findById(letter.schoolId);
+        if (!school || !school.letterheadDetail || !school.logoUrl) {
+            res.status(404);
+            throw new Error('Data kop surat atau logo sekolah belum diatur.');
+        }
+        
+        const dynamicData = letter.formData ? JSON.parse(letter.formData) : {};
+        const fullData = {
+            ...dynamicData,
+            kop_surat: school.letterheadDetail,
+            logo_url: await storageService.getAccessUrl(school.logoUrl, 'cloudinary'),
+            penyetuju: {
+                nama: approver?.name,
+                jabatan: approver?.role
+            },
+            tanggal_persetujuan: new Date().toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            }),
         };
 
-        let finalHtml: string;
-        if (typeof letter.template === 'object' && 'body' in letter.template) {
-            const compileTemplate = handlebars.compile(letter.template.body);
-            finalHtml = compileTemplate(context);
-        } else {
-            throw new Error('Template surat tidak valid.');
-        }
+        const compileTemplate = handlebars.compile(template.body);
+        const finalHtml = compileTemplate(fullData);
 
-        console.log("Meluncurkan Puppeteer untuk membuat PDF...");
-        browser = await puppeteer.launch({
+        const browser = await puppeteer.launch({ 
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
-
         const page = await browser.newPage();
         await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
-        
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-        console.log("PDF berhasil dibuat dalam buffer.");
+        await browser.close();
 
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        fs.writeFileSync(tempFilePath, pdfBuffer);
-
-        const fileStats = fs.statSync(tempFilePath);
-        const mockFile: Express.Multer.File = {
-            fieldname: 'file',
-            originalname: `${letter.judul.replace(/ /g, '_')}.pdf`,
-            encoding: '7bit',
+        const mockFile = {
+            buffer: pdfBuffer,
+            originalname: `surat-${letter.nomorSurat.replace(/\//g, '_')}.pdf`,
             mimetype: 'application/pdf',
-            size: fileStats.size,
-            destination: tempDir,
-            filename: `${letter._id}.pdf`,
-            path: tempFilePath,
-            stream: fs.createReadStream(tempFilePath),
-            buffer: fs.readFileSync(tempFilePath),
+            size: pdfBuffer.length
         };
+        
+        fileIdentifier = await storageService.upload(mockFile as Express.Multer.File, 'b2');
 
-        fileIdentifier = await storageService.upload(mockFile, 'b2');
-        if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-        }
-
-        letter.nomorSurat = formattedNomorSurat;
         letter.fileUrl = fileIdentifier;
         letter.status = 'APPROVED';
-        letter.approvedBy = req.user?.id;
-        letter.tanggalSurat = new Date();
-
+        letter.approvedBy = approver?._id as mongoose.Types.ObjectId | undefined;
+        letter.approvedAt = new Date();
+        
         const updatedLetter = await letter.save();
 
-        res.status(200).json({ message: 'Surat berhasil disetujui dan PDF telah digenerate.', data: updatedLetter });
+        res.status(200).json({
+            message: 'Surat berhasil disetujui dan PDF telah dibuat.',
+            data: updatedLetter
+        });
 
     } catch (error) {
-        if (fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath);
-        }
         if (fileIdentifier) {
-            console.error("Terjadi error setelah upload file. Memulai proses rollback dari B2...");
             try {
-                await storageService.delete(fileIdentifier, 'b2');
-                console.log("Rollback berhasil: File yatim telah dihapus dari B2.");
+                const parsedIdentifier = JSON.parse(fileIdentifier);
+                await storageService.delete(fileIdentifier, 'b2', parsedIdentifier.fileName);
             } catch (cleanupError) {
-                console.error("GAGAL ROLLBACK: Gagal menghapus file yatim di B2. File Identifier:", fileIdentifier, "Error:", cleanupError);
+                console.error('KRITIKAL: Gagal membersihkan file yatim.', cleanupError);
             }
         }
         next(error);
-    } finally {
-        if (browser) {
-            await browser.close();
-            console.log("Browser Puppeteer ditutup.");
-        }
     }
-};
+});
 
 export const rejectLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {

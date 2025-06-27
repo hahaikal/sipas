@@ -1,19 +1,24 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
+interface IFormData {
+  [key: string]: any;
+}
+
 interface ILetter {
-  nomorSurat?: string;
+  nomorSurat: string;
   judul: string;
   tanggalSurat: Date;
-  kategori?: string;
-  tipeSurat: 'masuk' | 'keluar' | 'generated';
+  kategori: string;
+  tipeSurat: 'masuk' | 'keluar';
   fileUrl?: string;
-  content?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
-  formData?: Map<string, any>;
   createdBy: Types.ObjectId;
-  approvedBy?: Types.ObjectId;
-  template?: Types.ObjectId;
   schoolId: Types.ObjectId;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  templateId?: Types.ObjectId;
+  content?: string; // Add this line
+  formData?: string;
+  approvedBy?: Types.ObjectId;
+  approvedAt?: Date; 
 }
 
 export interface ILetterDocument extends ILetter, Document {}
@@ -21,9 +26,8 @@ export interface ILetterDocument extends ILetter, Document {}
 const letterSchema = new Schema<ILetterDocument>({
   nomorSurat: {
     type: String,
-    unique: true,
-    sparse: true,
-    trim: true,
+    required: true,
+    // unique: true,
   },
   judul: {
     type: String,
@@ -32,46 +36,51 @@ const letterSchema = new Schema<ILetterDocument>({
   tanggalSurat: {
     type: Date,
     required: true,
-    default: Date.now,
   },
   kategori: {
     type: String,
+    required: true,
   },
   tipeSurat: {
     type: String,
-    enum: ['masuk', 'keluar', 'generated'],
+    enum: ['masuk', 'keluar'],
     required: true,
   },
   fileUrl: {
     type: String,
   },
-  content: {
-      type: String,
-  },
-  status: {
-      type: String,
-      enum: ['PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED'],
-      default: 'ARCHIVED',
-  },
-  formData: { type: Map, of: String },
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-  },
-  approvedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-  },
-  template: {
-      type: Schema.Types.ObjectId,
-      ref: 'LetterTemplate',
   },
   schoolId: {
     type: Schema.Types.ObjectId,
     ref: 'School',
     required: true,
     index: true,
+  },
+  status: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'PENDING',
+  },
+  templateId: {
+    type: Schema.Types.ObjectId,
+    ref: 'LetterTemplate',
+  },
+  content: { // Add this block
+    type: String,
+  },
+  formData: {
+    type: String,
+  },
+  approvedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  approvedAt: {
+    type: Date,
   },
 }, { timestamps: true });
 
