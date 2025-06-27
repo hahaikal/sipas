@@ -80,9 +80,9 @@ export const getLetterViewUrl = async (id: string): Promise<{ url: string }> => 
 };
 
 export const approveLetter = async (id: string): Promise<{ message: string; data: Letter }> => {
-    const response = await api.patch(`/letters/${id}/approve`);
+    const response = await api.post(`/letters/${id}/approve`);
     return response.data;
-}
+};
 
 export const rejectLetter = async (id: string): Promise<{ message: string; data: Letter }> => {
     const response = await api.patch(`/letters/${id}/reject`);
