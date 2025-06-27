@@ -5,6 +5,5 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'admin' | 'guru' | 'kepala sekolah';
-  schoolId?: string;
+  role: UserRole;
 }
