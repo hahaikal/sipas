@@ -14,10 +14,10 @@ import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeh
 interface TemplateFormProps {
     initialData?: LetterTemplate | null;
     onSuccess: () => void;
-    isMaximized?: boolean;
+    onMaximizeToggle: (isMaximized: boolean) => void; // <-- Prop baru
 }
 
-export default function TemplateForm({ initialData, onSuccess, isMaximized = false }: TemplateFormProps) {
+export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle }: TemplateFormProps) {
     const { register, handleSubmit, control, setValue } = useForm<LetterTemplate>({
         defaultValues: initialData || { name: '', description: '', body: '' }
     });
@@ -64,7 +64,8 @@ export default function TemplateForm({ initialData, onSuccess, isMaximized = fal
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-96 overflow-hidden">
-            <div className="flex-grow overflow-y-auto px-6 pt-2 pb-4 space-y-4 min-h-0 max-h-[calc(100vh-6rem)]">
+            {/* Perbaikan: Area konten ini sekarang bisa di-scroll */}
+            <div className="flex-grow overflow-y-auto space-y-4 pr-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Nama Template</Label>
                     <Input id="name" {...register('name', { required: true })} disabled={isLoading} />
@@ -95,12 +96,16 @@ export default function TemplateForm({ initialData, onSuccess, isMaximized = fal
                                 initialValue={value}
                                 onEditorChange={(content) => onChange(content)}
                                 init={{
-                                    height: isMaximized ? 650 : 400,
+                                    height: 500,
                                     menubar: true,
-                                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-                                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders',
+                                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount fullscreen',
+                                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders | fullscreen',
                                     content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
                                     setup: (editor: TinyMCEEditor) => {
+                                        editor.on('FullscreenStateChanged', (e) => {
+                                            onMaximizeToggle(e.state);
+                                        });
+
                                         editor.ui.registry.addMenuButton('placeholders', {
                                             text: 'Sisipkan Placeholder',
                                             fetch: async (callback) => {
@@ -121,7 +126,7 @@ export default function TemplateForm({ initialData, onSuccess, isMaximized = fal
                 </div>
             </div>
 
-            <div className="flex-shrink-0 p-6 pt-4 border-t flex justify-end bg-background">
+            <div className="flex justify-end pt-4 border-t flex-shrink-0">
                 <Button type="submit" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Template'}</Button>
             </div>
         </form>
