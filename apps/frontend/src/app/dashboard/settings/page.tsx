@@ -26,15 +26,16 @@ export default function SettingsPage() {
             if (!(user as { schoolId?: string })?.schoolId) return;
             try {
                 const response = await getSchoolSettings();
-                setSchool(response.data);
-                setLetterheadDetail(response.data.letterheadDetail || '');
-                if (response.data.logoUrl) {
+                setSchool(response);
+                setLetterheadDetail(response.letterheadDetail || '');
+                if (response.logoUrl) {
                     // Assuming the service returns a full URL or we construct it
                     // For now, let's assume it's a constructible path
-                    setLogoPreview(`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${response.data.logoUrl}`);
+                    setLogoPreview(`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${response.logoUrl}`);
                 }
-            } catch {
+            } catch (err) {
                 setError('Gagal memuat pengaturan sekolah.');
+                console.error("Gagal memuat pengaturan sekolah:", err);
             }
         };
         fetchSchoolData();

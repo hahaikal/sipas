@@ -16,7 +16,7 @@ router.post('/bot-upload', verifyApiKey, upload.single('file'), asyncHandler(let
 
 router.get('/dashboard/stats', protect, asyncHandler(letterController.getDashboardStats));
 
-router.post('/generate-request', protect, asyncHandler(letterController.createLetterRequest));
+router.post('/generate-request', protect, asyncHandler(letterController.generateLetterRequest));
 
 router.route('/')
   .post(protect, upload.single('file'), asyncHandler(letterController.createLetter));

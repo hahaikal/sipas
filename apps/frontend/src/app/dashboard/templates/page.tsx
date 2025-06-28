@@ -5,16 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Maximize, Minimize } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LetterTemplate, getAllTemplates, deleteTemplate } from '@/services/templateService';
 import TemplateForm from '@/components/forms/TemplateForm';
+import { cn } from '@/lib/utils';
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<LetterTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
+    const [isMaximized, setIsMaximized] = useState(false);
 
     const fetchTemplates = async () => {
         setIsLoading(true);
@@ -40,11 +42,13 @@ export default function TemplatesPage() {
     const openAddDialog = () => {
         setEditingTemplate(null);
         setIsFormOpen(true);
+        setIsMaximized(false); // Reset state when opening
     };
 
     const openEditDialog = (template: LetterTemplate) => {
         setEditingTemplate(template);
         setIsFormOpen(true);
+        setIsMaximized(false); // Reset state when opening
     };
     
     const handleDelete = async (id: string) => {
@@ -69,13 +73,27 @@ export default function TemplatesPage() {
             </div>
 
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent className="max-w-4xl">
-                    <DialogHeader>
+                <DialogContent className={cn(
+                    "flex flex-col p-0", // KUNCI: pastikan dialog adalah flex container kolom dan hapus padding
+                    isMaximized ? "w-[95vw] max-w-[95vw] h-[95vh]" : "max-w-4xl"
+                )}>
+                    <DialogHeader className="p-6 pb-4 flex-shrink-0">
                         <DialogTitle>{editingTemplate ? 'Edit Template' : 'Tambah Template Baru'}</DialogTitle>
                     </DialogHeader>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-3 right-14 z-10"
+                        onClick={() => setIsMaximized(!isMaximized)}
+                    >
+                        {isMaximized ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                        <span className="sr-only">{isMaximized ? 'Minimize' : 'Maximize'}</span>
+                    </Button>
+                    
                     <TemplateForm 
                         initialData={editingTemplate} 
                         onSuccess={handleFormSuccess} 
+                        isMaximized={isMaximized}
                     />
                 </DialogContent>
             </Dialog>

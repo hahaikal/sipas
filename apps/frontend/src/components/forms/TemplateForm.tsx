@@ -14,9 +14,10 @@ import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeh
 interface TemplateFormProps {
     initialData?: LetterTemplate | null;
     onSuccess: () => void;
+    isMaximized?: boolean;
 }
 
-export default function TemplateForm({ initialData, onSuccess }: TemplateFormProps) {
+export default function TemplateForm({ initialData, onSuccess, isMaximized = false }: TemplateFormProps) {
     const { register, handleSubmit, control, setValue } = useForm<LetterTemplate>({
         defaultValues: initialData || { name: '', description: '', body: '' }
     });
@@ -29,8 +30,8 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
             try {
                 const settingsRes = await getSchoolSettings();
                 setLetterhead({
-                    logoUrl: settingsRes.data.logoUrl ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${settingsRes.data.logoUrl}` : '',
-                    detail: settingsRes.data.letterheadDetail || ''
+                    logoUrl: settingsRes.logoUrl ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${settingsRes.logoUrl}` : '',
+                    detail: settingsRes.letterheadDetail || ''
                 });
             } catch (error) {
                 console.error("Failed to fetch dependencies", error);
@@ -62,62 +63,65 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="name">Nama Template</Label>
-                <Input id="name" {...register('name', { required: true })} disabled={isLoading} />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="description">Deskripsi</Label>
-                <Textarea id="description" {...register('description')} disabled={isLoading} />
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-96 overflow-hidden">
+            <div className="flex-grow overflow-y-auto px-6 pt-2 pb-4 space-y-4 min-h-0 max-h-[calc(100vh-6rem)]">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Nama Template</Label>
+                    <Input id="name" {...register('name', { required: true })} disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="description">Deskripsi</Label>
+                    <Textarea id="description" {...register('description')} disabled={isLoading} />
+                </div>
 
-            <div className="space-y-2">
-                <Label>Preview Kop Surat (Read-only)</Label>
-                <div className="border rounded-md p-4 bg-gray-50 flex items-start gap-4">
-                    {letterhead.logoUrl && <img src={letterhead.logoUrl} alt="Logo" className="h-20" />}
-                    <div dangerouslySetInnerHTML={{ __html: letterhead.detail }} />
+                <div className="space-y-2">
+                    <Label>Preview Kop Surat (Read-only)</Label>
+                    <div className="border rounded-md p-4 bg-gray-50 flex items-start gap-4">
+                        {letterhead.logoUrl && <img src={letterhead.logoUrl} alt="Logo" className="h-20" />}
+                        <div dangerouslySetInnerHTML={{ __html: letterhead.detail }} />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="body">Isi Surat</Label>
+                    <Controller
+                        name="body"
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Editor
+                                id='body'
+                                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                                onInit={(_evt, editor) => editorRef.current = editor}
+                                initialValue={value}
+                                onEditorChange={(content) => onChange(content)}
+                                init={{
+                                    height: isMaximized ? 650 : 400,
+                                    menubar: true,
+                                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                                    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders',
+                                    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                    setup: (editor: TinyMCEEditor) => {
+                                        editor.ui.registry.addMenuButton('placeholders', {
+                                            text: 'Sisipkan Placeholder',
+                                            fetch: async (callback) => {
+                                                const placeholders = await getPlaceholders();
+                                                const items: Ui.Menu.MenuItemSpec[] = placeholders.map((p: Placeholder) => ({
+                                                    type: 'menuitem',
+                                                    text: p.text,
+                                                    onAction: () => editor.insertContent(p.value),
+                                                }));
+                                                callback(items);
+                                            },
+                                        });
+                                    }
+                                }}
+                            />
+                        )}
+                    />
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <Label htmlFor="body">Isi Surat</Label>
-                <Controller
-                    name="body"
-                    control={control}
-                    render={({ field: { onChange, value } }) => (
-                        <Editor
-                            id='body'
-                            apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                            onInit={(_evt, editor) => editorRef.current = editor}
-                            initialValue={value}
-                            onEditorChange={(content) => onChange(content)}
-                            init={{
-                                height: 500,
-                                menubar: true,
-                                plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-                                toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders',
-                                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                                setup: (editor: TinyMCEEditor) => {
-                                    editor.ui.registry.addMenuButton('placeholders', {
-                                        text: 'Sisipkan Placeholder',
-                                        fetch: async (callback) => {
-                                            const placeholders = await getPlaceholders();
-                                            const items: Ui.Menu.MenuItemSpec[] = placeholders.map((p: Placeholder) => ({
-                                                type: 'menuitem',
-                                                text: p.text,
-                                                onAction: (_api) => editor.insertContent(p.value),
-                                            }));
-                                            callback(items);
-                                        },
-                                    });
-                                }
-                            }}
-                        />
-                    )}
-                />
-            </div>
-            <div className="flex justify-end">
+            <div className="flex-shrink-0 p-6 pt-4 border-t flex justify-end bg-background">
                 <Button type="submit" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Template'}</Button>
             </div>
         </form>

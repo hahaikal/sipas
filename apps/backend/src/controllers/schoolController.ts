@@ -9,6 +9,7 @@ export const uploadLogo = asyncHandler(async (req: AuthenticatedRequest, res: Re
         res.status(400);
         throw new Error('File gambar harus diunggah.');
     }
+    
     const publicId = await storageService.upload(req.file, 'cloudinary');
     const imageUrl = await storageService.getAccessUrl(publicId, 'cloudinary');
     

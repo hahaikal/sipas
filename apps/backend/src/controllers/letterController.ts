@@ -287,13 +287,18 @@ export const generateAndApproveLetter = asyncHandler(async (req: AuthenticatedRe
             res.status(404);
             throw new Error('Surat yang akan disetujui tidak ditemukan.');
         }
-        
-        if (!letter.templateId) {
+
+        if (!letter.templateRef) {
              res.status(400);
              throw new Error('Surat ini tidak terhubung dengan template manapun.');
         }
 
-        const template = await LetterTemplate.findById(letter.templateId);
+        if (!letter.nomorSurat) {
+            res.status(400);
+            throw new Error('Nomor surat harus ditentukan sebelum persetujuan.');
+        }
+
+        const template = await LetterTemplate.findById(letter.templateRef);
         if (!template) {
             res.status(404);
             throw new Error('Template untuk surat ini tidak ditemukan.');
@@ -305,9 +310,11 @@ export const generateAndApproveLetter = asyncHandler(async (req: AuthenticatedRe
             throw new Error('Data kop surat atau logo sekolah belum diatur.');
         }
         
-        const dynamicData = letter.formData ? JSON.parse(letter.formData) : {};
+        const dynamicData = letter.templateData ? Object.fromEntries(letter.templateData) : {};
         const fullData = {
             ...dynamicData,
+            nomor_surat: letter.nomorSurat,
+            tanggal_surat: letter.tanggalSurat?.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
             kop_surat: school.letterheadDetail,
             logo_url: await storageService.getAccessUrl(school.logoUrl, 'cloudinary'),
             penyetuju: {
@@ -330,10 +337,11 @@ export const generateAndApproveLetter = asyncHandler(async (req: AuthenticatedRe
         await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
         await browser.close();
-
+        
+        const safeNomorSurat = letter.nomorSurat.replace(/[\/\\?%*:|"<>]/g, '_');
         const mockFile = {
             buffer: pdfBuffer,
-            originalname: `surat-${letter.nomorSurat.replace(/\//g, '_')}.pdf`,
+            originalname: `surat-${safeNomorSurat}.pdf`,
             mimetype: 'application/pdf',
             size: pdfBuffer.length
         };
@@ -417,67 +425,57 @@ const getNextSequenceValue = async (schoolId: string, year: number) => {
     return sequence.seq;
 };
 
-export const createLetterRequest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { templateId, formData } = req.body;
-        const schoolId = req.user?.schoolId;
+/**
+ * @desc    Membuat request surat baru dari sebuah template
+ * @route   POST /api/letters/generate-request
+ * @access  Private (All authenticated users)
+ */
+export const generateLetterRequest = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const { templateId, templateData, judul } = req.body;
+    const user = req.user;
 
-        if (!templateId || !formData) {
-            res.status(400);
-            throw new Error("Template ID dan data form harus diisi.");
-        }
-
-        const template = await LetterTemplate.findOne({ _id: templateId, schoolId });
-        if (!template) {
-            res.status(404);
-            throw new Error("Template surat tidak ditemukan.");
-        }
-
-        let generatedContent = template.body;
-        for (const key in formData) {
-            const placeholder = new RegExp(`{${key}}`, 'g');
-            generatedContent = generatedContent.replace(placeholder, formData[key]);
-        }
-
-        const currentYear = new Date().getFullYear();
-        const sequenceNumber = await getNextSequenceValue(schoolId!.toString(), currentYear);
-        const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
-
-        const newLetter = new Letter({
-            nomorSurat: formattedNomorSurat,
-            judul: template.name,
-            tipeSurat: 'generated',
-            content: generatedContent,
-            status: 'PENDING',
-            formData: formData,
-            template: templateId,
-            createdBy: req.user?.id,
-            schoolId,
-        });
-
-        const createdLetter = await newLetter.save();
-        res.status(201).json({ message: 'Pengajuan surat berhasil dibuat.', data: createdLetter });
-
-    } catch (error) {
-        next(error);
+    if (!templateId || !templateData) {
+        res.status(400);
+        throw new Error('ID Template dan data isian tidak boleh kosong.');
     }
-};
 
-export const getLetterPreview = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const letter = await Letter.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
+    const newLetter = new Letter({
+        judul: judul || 'Pengajuan Surat Baru',
+        templateRef: templateId,
+        templateData: templateData,
+        createdBy: user?._id,
+        schoolId: user?.schoolId,
+        status: 'PENDING',
+    });
 
-        if (!letter) {
-            res.status(404);
-            throw new Error('Surat tidak ditemukan.');
-        }
+    await newLetter.save();
 
-        res.status(200).json({ content: letter.content || 'Konten tidak tersedia.' });
+    res.status(201).json({
+        message: 'Pengajuan surat berhasil dibuat dan sedang menunggu persetujuan.',
+        data: newLetter
+    });
+});
 
-    } catch (error) {
-        next(error);
+export const getLetterPreview = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const letter = await Letter.findById(req.params.id);
+
+    if (!letter || !letter.templateRef) {
+        res.status(404);
+        throw new Error('Surat atau template terkait tidak ditemukan.');
     }
-};
+
+    const template = await LetterTemplate.findById(letter.templateRef);
+    if (!template) {
+        res.status(404);
+        throw new Error('Template untuk surat ini tidak ditemukan.');
+    }
+
+    const dynamicData = letter.templateData ? Object.fromEntries(letter.templateData) : {};
+    const compileTemplate = handlebars.compile(template.body);
+    const htmlContent = compileTemplate(dynamicData);
+    
+    res.status(200).json({ htmlContent: htmlContent });
+});
 
 export const createDisposition = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { toUser, instructions } = req.body;
