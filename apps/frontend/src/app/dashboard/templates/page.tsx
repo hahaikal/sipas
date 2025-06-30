@@ -1,22 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MoreHorizontal, PlusCircle, Maximize2, Minimize2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LetterTemplate, getAllTemplates, deleteTemplate } from '@/services/templateService';
-import TemplateForm from '@/components/forms/TemplateForm';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<LetterTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<LetterTemplate | null>(null);
-    const [isFormMaximized, setFormMaximized] = useState(false);
 
     const fetchTemplates = async () => {
         setIsLoading(true);
@@ -25,6 +21,7 @@ export default function TemplatesPage() {
             setTemplates(response.data);
         } catch (error) {
             console.error("Failed to fetch templates", error);
+            toast.error("Gagal memuat data template.");
         } finally {
             setIsLoading(false);
         }
@@ -33,87 +30,32 @@ export default function TemplatesPage() {
     useEffect(() => {
         fetchTemplates();
     }, []);
-
-    const handleFormSuccess = () => {
-        setIsFormOpen(false);
-        setFormMaximized(false); 
-        fetchTemplates();
-    };
-    
-    const handleOpenChange = (open: boolean) => {
-        setIsFormOpen(open);
-        if (!open) {
-            setFormMaximized(false); 
-        }
-    };
-
-    const openAddDialog = () => {
-        setEditingTemplate(null);
-        setIsFormOpen(true);
-    };
-
-    const openEditDialog = (template: LetterTemplate) => {
-        setEditingTemplate(template);
-        setIsFormOpen(true);
-    };
     
     const handleDelete = async (id: string) => {
         if (confirm('Apakah Anda yakin ingin menghapus template ini?')) {
-            try {
-                await deleteTemplate(id);
+            const promise = deleteTemplate(id).then(() => {
                 fetchTemplates();
-            } catch {
-                alert('Gagal menghapus template.');
-            }
-        }
-    };
+            });
 
-    const toggleMaximize = () => {
-        setFormMaximized(!isFormMaximized);
+            toast.promise(promise, {
+                loading: 'Menghapus template...',
+                success: 'Template berhasil dihapus.',
+                error: 'Gagal menghapus template.',
+            });
+        }
     };
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Manajemen Template Surat</h1>
-                <Button onClick={openAddDialog}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Tambah Template Baru
-                </Button>
+                <Link href="/dashboard/templates/add">
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Template Baru
+                    </Button>
+                </Link>
             </div>
-
-            <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
-                <DialogContent className={cn(
-                    "transition-all duration-300 ease-in-out flex flex-col",
-                    isFormMaximized ? "w-[95vw] h-[95vh] max-w-none" : "max-w-6xl"
-                )}>
-                    <DialogHeader className="flex-shrink-0 flex flex-row items-center justify-between">
-                        <DialogTitle>{editingTemplate ? 'Edit Template' : 'Tambah Template Baru'}</DialogTitle>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={toggleMaximize}
-                                className="h-8 w-8"
-                                title={isFormMaximized ? "Minimize" : "Maximize"}
-                            >
-                                {isFormMaximized ? (
-                                    <Minimize2 className="h-4 w-4" />
-                                ) : (
-                                    <Maximize2 className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </div>
-                    </DialogHeader>
-                    <div className="flex-grow overflow-hidden">
-                      <TemplateForm 
-                          initialData={editingTemplate} 
-                          onSuccess={handleFormSuccess}
-                          onMaximizeToggle={setFormMaximized}
-                      />
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             <Card>
                 <CardHeader>
@@ -145,7 +87,11 @@ export default function TemplatesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => openEditDialog(template)}>Edit</DropdownMenuItem>
+                                                    <Link href={`/dashboard/templates/${template._id}/edit`}>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                    </Link>
                                                     <DropdownMenuItem onClick={() => handleDelete(template._id)} className="text-destructive">Hapus</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

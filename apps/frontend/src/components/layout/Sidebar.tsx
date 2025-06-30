@@ -15,7 +15,7 @@ const Sidebar = () => {
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/arsip", label: "Daftar Arsip", icon: Archive },
     { href: "/dashboard/upload", label: "Upload Surat", icon: Upload },
-    { href: "#", label: "Pembuatan Surat", icon: FileText },
+    { href: "/dashboard/ajukan-surat", label: "Pembuatan Surat", icon: FileText },
   ];
 
   const adminLinks = [
