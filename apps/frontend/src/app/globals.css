@@ -113,3 +113,8 @@
     --font-inter: "Inter", sans-serif;
   }
 }
+
+/* Fix untuk z-index TinyMCE di dalam Dialog */
+.tox-tinymce-aux {
+  z-index: 99999 !important;
+}

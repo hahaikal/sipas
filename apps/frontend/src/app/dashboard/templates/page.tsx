@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LetterTemplate, getAllTemplates, deleteTemplate } from '@/services/templateService';
 import TemplateForm from '@/components/forms/TemplateForm';
@@ -68,6 +68,10 @@ export default function TemplatesPage() {
         }
     };
 
+    const toggleMaximize = () => {
+        setFormMaximized(!isFormMaximized);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -81,10 +85,25 @@ export default function TemplatesPage() {
             <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
                 <DialogContent className={cn(
                     "transition-all duration-300 ease-in-out flex flex-col",
-                    isFormMaximized ? "w-[95vw] h-[95vh] max-w-none" : "max-w-4xl"
+                    isFormMaximized ? "w-[95vw] h-[95vh] max-w-none" : "max-w-6xl"
                 )}>
-                    <DialogHeader className="flex-shrink-0">
+                    <DialogHeader className="flex-shrink-0 flex flex-row items-center justify-between">
                         <DialogTitle>{editingTemplate ? 'Edit Template' : 'Tambah Template Baru'}</DialogTitle>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleMaximize}
+                                className="h-8 w-8"
+                                title={isFormMaximized ? "Minimize" : "Maximize"}
+                            >
+                                {isFormMaximized ? (
+                                    <Minimize2 className="h-4 w-4" />
+                                ) : (
+                                    <Maximize2 className="h-4 w-4" />
+                                )}
+                            </Button>
+                        </div>
                     </DialogHeader>
                     <div className="flex-grow overflow-hidden">
                       <TemplateForm 

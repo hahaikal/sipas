@@ -2,7 +2,7 @@ import api from '@/lib/api';
 import { School } from '@sipas/types';
 
 export const getSchoolSettings = async (): Promise<School> => {
-    const response = await api.get('/schools/placeholders');
+    const response = await api.get('/schools/settings');
     return response.data;
 };
 
