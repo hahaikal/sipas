@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import type { Editor as TinyMCEEditor, Ui } from 'tinymce/tinymce';
 import { getSchoolSettings } from '@/services/schoolService';
 import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeholder } from '@/services/templateService';
@@ -14,7 +15,7 @@ import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeh
 interface TemplateFormProps {
     initialData?: LetterTemplate | null;
     onSuccess: () => void;
-    onMaximizeToggle: (isMaximized: boolean) => void; // <-- Prop baru
+    onMaximizeToggle: (isMaximized: boolean) => void;
 }
 
 export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle }: TemplateFormProps) {
@@ -23,6 +24,7 @@ export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle 
     });
     const [isLoading, setIsLoading] = useState(false);
     const [letterhead, setLetterhead] = useState({ logoUrl: '', detail: '' });
+    const [isEditorMaximized, setIsEditorMaximized] = useState(false);
     const editorRef = useRef<TinyMCEEditor | null>(null);
 
     useEffect(() => {
@@ -62,9 +64,14 @@ export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle 
         }
     };
 
+    const toggleEditorMaximize = () => {
+        const newMaximizedState = !isEditorMaximized;
+        setIsEditorMaximized(newMaximizedState);
+        onMaximizeToggle(newMaximizedState);
+    };
+
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-96 overflow-hidden">
-            {/* Perbaikan: Area konten ini sekarang bisa di-scroll */}
             <div className="flex-grow overflow-y-auto space-y-4 pr-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Nama Template</Label>
@@ -84,7 +91,29 @@ export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle 
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="body">Isi Surat</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="body">Isi Surat</Label>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={toggleEditorMaximize}
+                            className="h-8 px-2"
+                            title={isEditorMaximized ? "Minimize Editor" : "Maximize Editor"}
+                        >
+                            {isEditorMaximized ? (
+                                <>
+                                    <Minimize2 className="h-4 w-4 mr-1" />
+                                    Minimize
+                                </>
+                            ) : (
+                                <>
+                                    <Maximize2 className="h-4 w-4 mr-1" />
+                                    Maximize
+                                </>
+                            )}
+                        </Button>
+                    </div>
                     <Controller
                         name="body"
                         control={control}
@@ -96,14 +125,18 @@ export default function TemplateForm({ initialData, onSuccess, onMaximizeToggle 
                                 initialValue={value}
                                 onEditorChange={(content) => onChange(content)}
                                 init={{
-                                    height: 500,
+                                    height: isEditorMaximized ? 600 : 400,
                                     menubar: true,
                                     plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount fullscreen',
                                     toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat | placeholders | fullscreen',
                                     content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
                                     setup: (editor: TinyMCEEditor) => {
                                         editor.on('FullscreenStateChanged', (e) => {
-                                            onMaximizeToggle(e.state);
+                                            if (e.state) {
+                                                // Ketika masuk fullscreen TinyMCE, set dialog juga ke maximize
+                                                setIsEditorMaximized(true);
+                                                onMaximizeToggle(true);
+                                            }
                                         });
 
                                         editor.ui.registry.addMenuButton('placeholders', {
