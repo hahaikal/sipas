@@ -18,6 +18,8 @@ const router = Router();
 router.post('/upload-logo', protect, admin, uploadImage.single('logo'), schoolController.uploadLogo);
 router.put('/settings', protect, admin, schoolController.updateSchoolSettings);
 
+router.get('/settings', protect, admin, schoolController.getSchoolSettings);
+
 router.get('/placeholders', protect, (req, res) => {
     res.status(200).json(placeholderList);
 });

@@ -4,12 +4,33 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import School from '../models/School';
 import { storageService } from '../services/storageService';
 
+export const getSchoolSettings = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+        res.status(400);
+        throw new Error('School ID tidak ditemukan pada data pengguna.');
+    }
+
+    const school = await School.findById(schoolId).select('logoUrl letterheadDetail');
+
+    if (!school) {
+        res.status(404);
+        throw new Error('Sekolah tidak ditemukan.');
+    }
+
+    res.status(200).json({
+        logoUrl: school.logoUrl,
+        letterheadDetail: school.letterheadDetail
+    });
+});
+
+
 export const uploadLogo = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.file) {
         res.status(400);
         throw new Error('File gambar harus diunggah.');
     }
-    
     const publicId = await storageService.upload(req.file, 'cloudinary');
     const imageUrl = await storageService.getAccessUrl(publicId, 'cloudinary');
     
