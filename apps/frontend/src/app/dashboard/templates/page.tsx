@@ -81,7 +81,7 @@ export default function TemplatesPage() {
             <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
                 <DialogContent className={cn(
                     "transition-all duration-300 ease-in-out flex flex-col",
-                    isFormMaximized ? "w-[95vw] h-[95vh] max-w-none" : "max-w-4xl"
+                    isFormMaximized ? "w-[95vw] h-[95vh] max-w-none" : "max-w-6xl"
                 )}>
                     <DialogHeader className="flex-shrink-0">
                         <DialogTitle>{editingTemplate ? 'Edit Template' : 'Tambah Template Baru'}</DialogTitle>
