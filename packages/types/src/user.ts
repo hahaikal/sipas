@@ -6,4 +6,7 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
+  jabatan?: string;
+  nuptk?: string;
+  golongan?: string;
 }
