@@ -12,6 +12,9 @@ export interface CreateUserData {
     phone: string;
     password: string;
     role: 'guru' | 'admin' | 'kepala sekolah';
+    jabatan?: string;
+    nuptk?: string;
+    golongan?: string;
 }
 
 export interface UpdateUserData {
@@ -19,6 +22,9 @@ export interface UpdateUserData {
     email?: string;
     phone?: string;
     role?: 'guru' | 'admin' | 'kepala sekolah';
+    jabatan?: string;
+    nuptk?: string;
+    golongan?: string;
 }
 
 export const getAllUsers = async (): Promise<GetAllUsersResponse> => {

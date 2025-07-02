@@ -1,7 +1,7 @@
 import api from '@/lib/api';
 import { School } from '@sipas/types';
 
-export const getSchoolSettings = async (): Promise<School> => {
+export const getSchoolSettings = async (): Promise<{ data: School }> => {
     const response = await api.get('/schools/settings');
     return response.data;
 };

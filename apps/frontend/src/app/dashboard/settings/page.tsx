@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Editor } from '@tinymce/tinymce-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { School, getSchoolSettings, updateSchoolSettings, uploadLogo } from '@/services/schoolService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,7 +16,7 @@ export default function SettingsPage() {
     const [school, setSchool] = useState<School | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [letterheadDetail, setLetterheadDetail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -26,16 +26,17 @@ export default function SettingsPage() {
             if (!(user as { schoolId?: string })?.schoolId) return;
             try {
                 const response = await getSchoolSettings();
-                setSchool(response);
-                setLetterheadDetail(response.letterheadDetail || '');
-                if (response.logoUrl) {
-                    // Assuming the service returns a full URL or we construct it
-                    // For now, let's assume it's a constructible path
-                    setLogoPreview(`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${response.logoUrl}`);
+                const schoolData = response.data; 
+                
+                setSchool(schoolData);
+                setLetterheadDetail(schoolData.letterheadDetail || '');
+                if (schoolData.logoUrl) {
+                    setLogoPreview(`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${schoolData.logoUrl}`);
                 }
-            } catch (err) {
+            } catch {
                 setError('Gagal memuat pengaturan sekolah.');
-                console.error("Gagal memuat pengaturan sekolah:", err);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchSchoolData();
@@ -80,6 +81,10 @@ export default function SettingsPage() {
         }
     };
 
+    if (isLoading) {
+        return <div>Memuat pengaturan...</div>;
+    }
+
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">Pengaturan Sekolah</h1>
@@ -105,14 +110,22 @@ export default function SettingsPage() {
 
                     <div className="space-y-2">
                         <Label htmlFor="letterheadDetail">Detail Kop Surat</Label>
-                        <Textarea 
-                            id="letterheadDetail" 
-                            rows={5}
+                        <Editor
+                            apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                             value={letterheadDetail}
-                            onChange={(e) => setLetterheadDetail(e.target.value)}
-                            placeholder="<h1>SMA Harapan Bangsa</h1><p>Jl. Pendidikan No. 123</p>"
+                            onEditorChange={(content) => setLetterheadDetail(content)}
+                            init={{
+                                height: 300,
+                                menubar: false,
+                                plugins: 'lists link image charmap wordcount',
+                                toolbar: 'undo redo | blocks | ' +
+                                  'bold italic forecolor | alignleft aligncenter ' +
+                                  'alignright alignjustify | bullist numlist outdent indent | ' +
+                                  'removeformat',
+                                content_style: 'body { font-family:Inter,sans-serif; font-size:14px }'
+                            }}
                         />
-                        <p className="text-sm text-muted-foreground">Gunakan tag HTML sederhana untuk format (contoh: &lt;h1&gt;, &lt;p&gt;, &lt;b&gt;).</p>
+                        <p className="text-sm text-muted-foreground">Gunakan editor untuk memformat kop surat sesuai kebutuhan.</p>
                     </div>
                 </CardContent>
                 <CardFooter>
