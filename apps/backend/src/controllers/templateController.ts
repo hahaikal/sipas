@@ -30,16 +30,17 @@ const sanitizeOptions = {
 };
 
 export const createTemplate = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { name, description, body, placeholders } = req.body;
+    const { name, description, body, placeholders, requiredInputs } = req.body;
 
     const sanitizedBody = sanitizeHtml(body, sanitizeOptions);
-    
+
     const template = new LetterTemplate({
         name,
         description,
         body: sanitizedBody,
         placeholders,
         schoolId: req.user?.schoolId,
+        requiredInputs,
     });
 
     const createdTemplate = await template.save();
@@ -62,13 +63,14 @@ export const getTemplateById = asyncHandler(async (req: AuthenticatedRequest, re
 });
 
 export const updateTemplate = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { name, description, body, placeholders } = req.body;
+    const { name, description, body, placeholders, requiredInputs } = req.body;
     const template = await LetterTemplate.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
     if (template) {
         template.name = name || template.name;
         template.description = description || template.description;
         template.placeholders = placeholders || template.placeholders;
+        template.requiredInputs = requiredInputs || template.requiredInputs;
 
         if (body) {
             template.body = sanitizeHtml(body, sanitizeOptions);
