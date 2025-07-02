@@ -5,12 +5,19 @@ export interface IPlaceholder {
   description: string;
 }
 
+export interface IRequiredInput {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'date' | 'number';
+}
+
 export interface ILetterTemplate extends Document {
   name: string;
   description: string;
   body: string;
   placeholders: IPlaceholder[];
   schoolId: Types.ObjectId;
+  requiredInputs: IRequiredInput[];
 }
 
 const placeholderSchema = new Schema<IPlaceholder>({
@@ -38,6 +45,11 @@ const letterTemplateSchema = new Schema<ILetterTemplate>({
     required: true,
     index: true,
   },
+  requiredInputs: [{
+    name: { type: String, required: true },
+    label: { type: String, required: true },
+    type: { type: String, required: true, enum: ['text', 'textarea', 'date', 'number'] }
+  }]
 }, { timestamps: true });
 
 const LetterTemplate = model<ILetterTemplate>('LetterTemplate', letterTemplateSchema);
