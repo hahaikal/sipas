@@ -9,6 +9,9 @@ interface IUser {
   password?: string;
   role: UserRole;
   schoolId: Types.ObjectId;
+  jabatan?: string;
+  nuptk?: string;
+  golongan?: string;
 }
 
 export interface IUserDocument extends IUser, Document {}
@@ -45,6 +48,9 @@ const userSchema = new Schema<IUserDocument>({
     required: true,
     index: true,
   },
+  jabatan: { type: String },
+  nuptk: { type: String },
+  golongan: { type: String },
 }, { timestamps: true });
 
 userSchema.pre<IUserDocument>('save', async function (next) {

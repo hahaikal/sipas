@@ -2,14 +2,14 @@ import { Request, Response } from 'express';
 
 export const getPlaceholders = (req: Request, res: Response) => {
     const placeholders = [
-      { "key": "{{nama_guru}}", "description": "Nama guru pemohon" },
-      { "key": "{{nuptk_guru}}", "description": "NUPTK guru pemohon" },
-      { "key": "{{jabatan_guru}}", "description": "Jabatan guru pemohon" },
-      { "key": "{{nama_kepsek}}", "description": "Nama kepala sekolah" },
-      { "key": "{{nip_kepsek}}", "description": "NIP kepala sekolah" },
-      { "key": "{{nomor_surat_final}}", "description": "Nomor surat (dihasilkan saat disetujui)" },
-      { "key": "{{tanggal_surat_dibuat}}", "description": "Tanggal surat diajukan" },
-      { "key": "{{tanggal_surat_disetujui}}", "description": "Tanggal surat disetujui" }
+      { "value": "{{nama_guru}}", "text": "Nama guru pemohon" },
+      { "value": "{{nuptk_guru}}", "text": "NUPTK guru pemohon" },
+      { "value": "{{jabatan_guru}}", "text": "Jabatan guru pemohon" },
+      { "value": "{{nama_kepsek}}", "text": "Nama kepala sekolah" },
+      { "value": "{{nip_kepsek}}", "text": "NIP kepala sekolah" },
+      { "value": "{{nomor_surat_final}}", "text": "Nomor surat (dihasilkan saat disetujui)" },
+      { "value": "{{tanggal_surat_dibuat}}", "text": "Tanggal surat diajukan" },
+      { "value": "{{tanggal_surat_disetujui}}", "text": "Tanggal surat disetujui" }
     ];
 
     res.status(200).json(placeholders);

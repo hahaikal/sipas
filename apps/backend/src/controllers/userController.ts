@@ -13,7 +13,7 @@ export const getAllUsers = async (req: AuthenticatedRequest, res: Response, next
 
 export const createUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { name, email, phone, password, role } = req.body;
+        const { name, email, phone, password, role, jabatan, nuptk, golongan } = req.body;
         const schoolId = req.user?.schoolId;
 
         const userExists = await User.findOne({ $or: [{ email }, { phone }], schoolId: schoolId });
@@ -29,6 +29,9 @@ export const createUser = async (req: AuthenticatedRequest, res: Response, next:
             password,
             role,
             schoolId: schoolId,
+            jabatan,
+            nuptk,    
+            golongan, 
         });
 
         if (user) {
@@ -52,7 +55,7 @@ export const createUser = async (req: AuthenticatedRequest, res: Response, next:
 
 export const updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { name, email, phone, role } = req.body;
+        const { name, email, phone, role, jabatan, nuptk, golongan } = req.body;
         const user = await User.findOne({ _id: req.params.id, schoolId: req.user?.schoolId });
 
         if (!user) {
@@ -64,6 +67,9 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response, next:
         user.email = email || user.email;
         user.phone = phone || user.phone;
         user.role = role || user.role;
+        user.jabatan = jabatan || user.jabatan;
+        user.nuptk = nuptk || user.nuptk;        
+        user.golongan = golongan || user.golongan;
 
         const updatedUser = await user.save();
         const userResponse = updatedUser.toObject();
