@@ -24,6 +24,11 @@ router.route('/')
 router.route('/list')
   .post(protect, asyncHandler(letterController.getAllLetters));
 
+router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.generateAndApproveLetter));
+router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
+router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
+router.post('/:id/view', protect, letterController.getLetterViewUrl);
+
 router.route('/:id')
   .all(protect)
   .post(letterController.getLetterById)
@@ -33,11 +38,6 @@ router.route('/:id')
 router.route('/:id/dispositions')
   .post(protect, asyncHandler(letterController.createDisposition))
   .get(protect, asyncHandler(letterController.getDispositionsForLetter));
-
-router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.generateAndApproveLetter));
-router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
-router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
-router.post('/:id/view', protect, letterController.getLetterViewUrl);
 
 router.get('/by-nomor/:nomor', protect, letterController.getLetterByNumber);
 

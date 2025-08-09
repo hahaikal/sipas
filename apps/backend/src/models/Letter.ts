@@ -12,8 +12,8 @@ interface ILetter {
   fileUrl?: string; 
   approvedBy?: Types.ObjectId; 
   approvedAt?: Date;
-  templateRef: Types.ObjectId;
-  templateData: Map<string, string>;
+  templateRef?: Types.ObjectId;
+  templateData?: Map<string, string>;
 }
 
 export interface ILetterDocument extends ILetter, Document {}
@@ -56,12 +56,12 @@ const letterSchema = new Schema<ILetterDocument>({
   templateRef: {
     type: Schema.Types.ObjectId,
     ref: 'LetterTemplate',
-    required: true,
+    required: false,
   },
   templateData: {
     type: Map,
     of: String,
-    required: true,
+    required: false,
   },
 }, { timestamps: true });
 
