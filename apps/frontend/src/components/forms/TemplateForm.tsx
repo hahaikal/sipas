@@ -8,16 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import type { Editor as TinyMCEEditor, Ui } from 'tinymce/tinymce';
 import { getSchoolSettings } from '@/services/schoolService';
 import { getPlaceholders, createTemplate, updateTemplate, LetterTemplate, Placeholder } from '@/services/templateService';
 import { Trash2 } from 'lucide-react';
-import Image from 'next/image';
 
 interface TemplateFormProps {
     initialData?: LetterTemplate | null;
-    onSuccess: () => void;
+    onSuccess?: () => void;
 }
 
 export default function TemplateForm({ initialData, onSuccess }: TemplateFormProps) {
@@ -45,10 +44,14 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
         const fetchData = async () => {
             try {
                 const settingsRes = await getSchoolSettings();
-                setLetterhead({
-                    logoUrl: settingsRes.data.logoUrl ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${settingsRes.data.logoUrl}` : '',
-                    detail: settingsRes.data.letterheadDetail || ''
-                });
+                
+                if (settingsRes && settingsRes.data) {
+                    const schoolData = settingsRes.data;
+                    setLetterhead({
+                        logoUrl: schoolData.logoUrl ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${schoolData.logoUrl}` : '',
+                        detail: schoolData.letterheadDetail || ''
+                    });
+                }
             } catch (error) {
                 console.error("Failed to fetch dependencies", error);
             }
@@ -65,17 +68,23 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
 
     const onSubmit = async (data: LetterTemplate) => {
         setIsLoading(true);
+        let isSuccess = false;
         try {
             if (initialData?._id) {
                 await updateTemplate(initialData._id, data);
             } else {
                 await createTemplate(data);
             }
-            onSuccess();
-        } catch {
+            isSuccess = true;
+        } catch (error) {
+            console.error("Error during template submission:", error);
             alert('Gagal menyimpan template.');
+            isSuccess = false;
         } finally {
             setIsLoading(false);
+            if (isSuccess && typeof onSuccess === 'function') {
+                onSuccess();
+            }
         }
     };
 
@@ -94,7 +103,7 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
                 <div className="space-y-2">
                     <Label>Preview Kop Surat (Read-only)</Label>
                     <div className="border rounded-md p-4 bg-gray-50 flex items-start gap-4 min-h-[100px]">
-                    {letterhead.logoUrl && <Image src={letterhead.logoUrl} alt="Logo" height={96} width={96} />}
+                        {letterhead.logoUrl && <img src={letterhead.logoUrl} alt="Logo" className="h-24" />}
                         <div dangerouslySetInnerHTML={{ __html: letterhead.detail }} />
                     </div>
                 </div>
@@ -125,7 +134,7 @@ export default function TemplateForm({ initialData, onSuccess }: TemplateFormPro
                                                 const items: Ui.Menu.MenuItemSpec[] = placeholders.map((p: Placeholder) => ({
                                                     type: 'menuitem',
                                                     text: p.text,
-                                                    onAction: () => editor.insertContent(p.value),
+                                                    onAction: (_api) => editor.insertContent(p.value),
                                                 }));
                                                 callback(items);
                                             },

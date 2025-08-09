@@ -24,7 +24,7 @@ router.route('/')
 router.route('/list')
   .post(protect, asyncHandler(letterController.getAllLetters));
 
-router.patch('/:id/approve', protect, isApprover, asyncHandler(letterController.generateAndApproveLetter));
+  router.post('/:id/approve', protect, isApprover, asyncHandler(letterController.approveLetter));
 router.patch('/:id/reject', protect, isApprover, asyncHandler(letterController.rejectLetter));
 router.get('/:id/preview', protect, asyncHandler(letterController.getLetterPreview));
 router.post('/:id/view', protect, letterController.getLetterViewUrl);

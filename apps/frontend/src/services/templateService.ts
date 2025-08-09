@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import { LetterTemplate, Placeholder } from '@sipas/types';
+import { LetterTemplate, Placeholder, RequiredInput } from '@sipas/types';
 
 export const getAllTemplates = async (): Promise<{ data: LetterTemplate[] }> => {
     const response = await api.get('/templates');
@@ -8,6 +8,12 @@ export const getAllTemplates = async (): Promise<{ data: LetterTemplate[] }> => 
 
 export const getTemplateById = async (id: string): Promise<{ data: LetterTemplate }> => {
     const response = await api.get(`/templates/${id}`);
+    return response.data;
+};
+
+// Fungsi baru untuk mengambil data persiapan template
+export const prepareTemplate = async (id: string): Promise<{ data: Pick<LetterTemplate, 'name' | 'description' | 'requiredInputs'> }> => {
+    const response = await api.get(`/templates/${id}/prepare`);
     return response.data;
 };
 
@@ -31,4 +37,4 @@ export const getPlaceholders = async (): Promise<Placeholder[]> => {
     return response.data;
 };
 
-export type { LetterTemplate, Placeholder };
+export type { LetterTemplate, Placeholder, RequiredInput };

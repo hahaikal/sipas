@@ -49,6 +49,7 @@ export default function TemplatesPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Manajemen Template Surat</h1>
+                {/* FIX: Mengubah Button menjadi Link ke halaman add */}
                 <Link href="/dashboard/templates/add">
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -87,12 +88,16 @@ export default function TemplatesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    {/* FIX: Mengubah Edit menjadi Link ke halaman edit */}
                                                     <Link href={`/dashboard/templates/${template._id}/edit`}>
                                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                                             Edit
                                                         </DropdownMenuItem>
                                                     </Link>
-                                                    <DropdownMenuItem onClick={() => handleDelete(template._id)} className="text-destructive">Hapus</DropdownMenuItem>
+                                                    {/* FIX: Menyesuaikan fungsi hapus */}
+                                                    <DropdownMenuItem onClick={() => handleDelete(template._id)} className="text-destructive focus:bg-destructive/10">
+                                                        Hapus
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

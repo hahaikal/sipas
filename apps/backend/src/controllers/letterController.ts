@@ -270,108 +270,117 @@ export const getLetterViewUrl = async (req: AuthenticatedRequest, res: Response,
   }
 };
 
-/**
- * @desc    Menyetujui surat, men-generate PDF dari template, dan menyimpan hasilnya.
- * @route   POST /api/letters/:id/approve
- * @access  Private (Kepala Sekolah, Admin)
- */
-export const generateAndApproveLetter = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const approveLetter = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const letterId = req.params.id;
     const approver = req.user;
+    const schoolId = req.user?.schoolId;
 
-    let fileIdentifier: string | null = null;
+    const letter = await Letter.findOne({ _id: letterId, schoolId });
 
-    try {
-        const letter = await Letter.findById(letterId).populate('createdBy');
-        if (!letter) {
-            res.status(404);
-            throw new Error('Surat yang akan disetujui tidak ditemukan.');
+    if (!letter) {
+        res.status(404);
+        throw new Error('Surat yang akan disetujui tidak ditemukan.');
+    }
+
+    if (letter.status !== 'PENDING') {
+        res.status(400);
+        throw new Error('Hanya surat dengan status PENDING yang dapat disetujui.');
+    }
+
+    if (letter.templateRef) {
+        // --- LOGIKA UNTUK SURAT DARI TEMPLATE ---
+        let fileIdentifier: string | null = null;
+        try {
+            // --- PERUBAHAN DI SINI ---
+            // Generate nomor surat resmi sebelum membuat PDF
+            const currentYear = new Date().getFullYear();
+            const sequenceNumber = await getNextSequenceValue(schoolId!.toString(), currentYear);
+            const formattedNomorSurat = `${sequenceNumber.toString().padStart(3, '0')}/SK/SIPAS/${currentYear}`;
+            letter.nomorSurat = formattedNomorSurat; // Ganti nomor sementara dengan nomor resmi
+
+            const template = await LetterTemplate.findById(letter.templateRef);
+            if (!template) {
+                throw new Error('Template untuk surat ini tidak ditemukan.');
+            }
+            // ... (sisa logika untuk generate PDF tetap sama)
+            
+            const school = await School.findById(letter.schoolId);
+            if (!school || !school.letterheadDetail || !school.logoUrl) {
+                throw new Error('Data kop surat atau logo sekolah belum diatur.');
+            }
+            
+            const dynamicData = letter.templateData ? Object.fromEntries(letter.templateData) : {};
+            const fullData = {
+                ...dynamicData,
+                nomor_surat: letter.nomorSurat, // Gunakan nomor surat yang baru dibuat
+                kop_surat: school.letterheadDetail,
+                logo_url: await storageService.getAccessUrl(school.logoUrl, 'cloudinary'),
+                penyetuju: {
+                    nama: approver?.name,
+                    jabatan: approver?.role
+                },
+                tanggal_persetujuan: new Date().toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                }),
+            };
+
+            const compileTemplate = handlebars.compile(template.body);
+            const finalHtml = compileTemplate(fullData);
+
+            const browser = await puppeteer.launch({ 
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+            const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+            await browser.close();
+
+            const mockFile = {
+                buffer: pdfBuffer,
+                originalname: `surat-${letter.nomorSurat.replace(/\//g, '_')}.pdf`,
+                mimetype: 'application/pdf',
+                size: pdfBuffer.length
+            };
+            
+            fileIdentifier = await storageService.upload(mockFile as Express.Multer.File, 'b2');
+
+            letter.fileUrl = fileIdentifier;
+            letter.status = 'APPROVED';
+            letter.approvedBy = approver?._id as mongoose.Types.ObjectId | undefined;
+            letter.approvedAt = new Date();
+            
+            const updatedLetter = await letter.save();
+
+            res.status(200).json({
+                message: 'Surat berhasil disetujui dan PDF telah dibuat.',
+                data: updatedLetter
+            });
+
+            } catch (error) {
+                if (fileIdentifier) {
+                try {
+                    const parsedIdentifier = JSON.parse(fileIdentifier);
+                    await storageService.delete(fileIdentifier, 'b2', parsedIdentifier.fileName);
+                } catch (cleanupError) {
+                    console.error('KRITIKAL: Gagal membersihkan file yatim.', cleanupError);
+                }
+            }
+            next(error);
         }
-
-        if (!letter.templateRef) {
-             res.status(400);
-             throw new Error('Surat ini tidak terhubung dengan template manapun.');
-        }
-
-        if (!letter.nomorSurat) {
-            res.status(400);
-            throw new Error('Nomor surat harus ditentukan sebelum persetujuan.');
-        }
-
-        const template = await LetterTemplate.findById(letter.templateRef);
-        if (!template) {
-            res.status(404);
-            throw new Error('Template untuk surat ini tidak ditemukan.');
-        }
-
-        const school = await School.findById(letter.schoolId);
-        if (!school || !school.letterheadDetail || !school.logoUrl) {
-            res.status(404);
-            throw new Error('Data kop surat atau logo sekolah belum diatur.');
-        }
-        
-        const dynamicData = letter.templateData ? Object.fromEntries(letter.templateData) : {};
-        const fullData = {
-            ...dynamicData,
-            nomor_surat: letter.nomorSurat,
-            tanggal_surat: letter.tanggalSurat?.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-            kop_surat: school.letterheadDetail,
-            logo_url: await storageService.getAccessUrl(school.logoUrl, 'cloudinary'),
-            penyetuju: {
-                nama: approver?.name,
-                jabatan: approver?.role
-            },
-            tanggal_persetujuan: new Date().toLocaleDateString('id-ID', {
-                day: 'numeric', month: 'long', year: 'numeric'
-            }),
-        };
-
-        const compileTemplate = handlebars.compile(template.body);
-        const finalHtml = compileTemplate(fullData);
-
-        const browser = await puppeteer.launch({ 
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
-        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
-        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-        await browser.close();
-        
-        const safeNomorSurat = letter.nomorSurat.replace(/[\/\\?%*:|"<>]/g, '_');
-        const mockFile = {
-            buffer: pdfBuffer,
-            originalname: `surat-${safeNomorSurat}.pdf`,
-            mimetype: 'application/pdf',
-            size: pdfBuffer.length
-        };
-        
-        fileIdentifier = await storageService.upload(mockFile as Express.Multer.File, 'b2');
-
-        letter.fileUrl = fileIdentifier;
+    } else {
         letter.status = 'APPROVED';
         letter.approvedBy = approver?._id as mongoose.Types.ObjectId | undefined;
         letter.approvedAt = new Date();
-        
+
         const updatedLetter = await letter.save();
 
         res.status(200).json({
-            message: 'Surat berhasil disetujui dan PDF telah dibuat.',
+            message: 'Surat berhasil disetujui.',
             data: updatedLetter
         });
-
-    } catch (error) {
-        if (fileIdentifier) {
-            try {
-                const parsedIdentifier = JSON.parse(fileIdentifier);
-                await storageService.delete(fileIdentifier, 'b2', parsedIdentifier.fileName);
-            } catch (cleanupError) {
-                console.error('KRITIKAL: Gagal membersihkan file yatim.', cleanupError);
-            }
-        }
-        next(error);
     }
-});
+    });
 
 export const rejectLetter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -425,24 +434,20 @@ const getNextSequenceValue = async (schoolId: string, year: number) => {
     return sequence.seq;
 };
 
-/**
- * @desc    Membuat request surat baru dari sebuah template
- * @route   POST /api/letters/generate-request
- * @access  Private (All authenticated users)
- */
 export const generateLetterRequest = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const { templateId, templateData, judul } = req.body;
+    const { templateId, formData, judul } = req.body;
     const user = req.user;
 
-    if (!templateId || !templateData) {
+    if (!templateId || !formData) {
         res.status(400);
-        throw new Error('ID Template dan data isian tidak boleh kosong.');
+        throw new Error('ID Template dan data isian (formData) tidak boleh kosong.');
     }
 
     const newLetter = new Letter({
         judul: judul || 'Pengajuan Surat Baru',
+        nomorSurat: `PENDING-${new mongoose.Types.ObjectId().toString()}`,
         templateRef: templateId,
-        templateData: templateData,
+        templateData: formData,
         createdBy: user?._id,
         schoolId: user?.schoolId,
         status: 'PENDING',
@@ -455,6 +460,7 @@ export const generateLetterRequest = asyncHandler(async (req: AuthenticatedReque
         data: newLetter
     });
 });
+
 
 export const getLetterPreview = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const letter = await Letter.findById(req.params.id);
